@@ -4,7 +4,7 @@ import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { 
   ArrowLeft, Package, MapPin, MessageSquare, Loader2, 
-  Truck, CheckCircle, Navigation, Flag, Star, XCircle
+  Truck, CheckCircle, Navigation, Flag, Star, XCircle, Banknote
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -34,6 +34,7 @@ import { GpsTracker } from "@/components/tracking/GpsTracker";
 import { RatingForm } from "@/components/ratings/RatingForm";
 import { RatingDisplay } from "@/components/ratings/RatingDisplay";
 import { FavoriteCarrierButton } from "@/components/favorites/FavoriteCarrierButton";
+import { PriceNegotiation } from "@/components/negotiations/PriceNegotiation";
 
 interface Deal {
   id: string;
@@ -48,6 +49,7 @@ interface Deal {
     pickup_address: string;
     delivery_address: string;
     pickup_date: string;
+    client_price?: number | null;
   };
 }
 
@@ -91,7 +93,7 @@ const DealChat = () => {
       .from("deals")
       .select(`
         *,
-        order:orders(cargo_type, pickup_address, delivery_address, pickup_date)
+        order:orders(cargo_type, pickup_address, delivery_address, pickup_date, client_price)
       `)
       .eq("id", dealId)
       .single();
@@ -404,62 +406,78 @@ const DealChat = () => {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col lg:flex-row min-h-0">
-        {/* Side Panel: GPS or Rating */}
-        {(showGpsTracking || showRating) && (
-          <div className="lg:w-80 shrink-0 border-b lg:border-b-0 lg:border-r p-4 bg-muted/20 space-y-4 overflow-y-auto">
-            {/* GPS Tracking */}
-            {showGpsTracking && (
-              isCarrier ? (
-                <GpsTracker dealId={dealId!} />
+        {/* Side Panel: GPS, Rating, or Negotiation */}
+        <div className="lg:w-80 shrink-0 border-b lg:border-b-0 lg:border-r p-4 bg-muted/20 space-y-4 overflow-y-auto">
+          {/* Price Negotiation - show for pending/accepted deals */}
+          {["pending", "accepted"].includes(deal.status) && (
+            <PriceNegotiation
+              orderId={deal.order_id}
+              clientId={deal.client_id}
+              carrierId={deal.carrier_id}
+              currentPrice={deal.agreed_price}
+              clientPrice={deal.order?.client_price}
+              onPriceAgreed={(newPrice) => {
+                setDeal(prev => prev ? { ...prev, agreed_price: newPrice } : null);
+                toast({
+                  title: "Цена обновлена",
+                  description: `Новая согласованная цена: ${newPrice.toLocaleString("ru-RU")} ₽`,
+                });
+              }}
+            />
+          )}
+
+          {/* GPS Tracking */}
+          {showGpsTracking && (
+            isCarrier ? (
+              <GpsTracker dealId={dealId!} />
+            ) : (
+              <LiveMap dealId={dealId!} carrierName={otherParticipantName} />
+            )
+          )}
+
+          {/* Rating Section */}
+          {showRating && (
+            <>
+              {myRating ? (
+                <RatingDisplay 
+                  rating={myRating} 
+                  title="Ваш отзыв" 
+                />
               ) : (
-                <LiveMap dealId={dealId!} carrierName={otherParticipantName} />
-              )
-            )}
+                <RatingForm
+                  dealId={dealId!}
+                  ratedUserId={otherUserId}
+                  ratedUserName={otherParticipantName}
+                  onRatingSubmitted={fetchRatings}
+                />
+              )}
 
-            {/* Rating Section */}
-            {showRating && (
-              <>
-                {myRating ? (
-                  <RatingDisplay 
-                    rating={myRating} 
-                    title="Ваш отзыв" 
-                  />
-                ) : (
-                  <RatingForm
-                    dealId={dealId!}
-                    ratedUserId={otherUserId}
-                    ratedUserName={otherParticipantName}
-                    onRatingSubmitted={fetchRatings}
-                  />
-                )}
-
-                {otherRating && (
-                  <Card>
-                    <CardContent className="pt-4">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Star className="w-4 h-4 text-gold fill-gold" />
-                        <span className="font-medium text-sm">Отзыв от {otherParticipantName}</span>
-                      </div>
-                      <div className="flex gap-0.5 mb-2">
-                        {[1, 2, 3, 4, 5].map((s) => (
-                          <Star
-                            key={s}
-                            className={`w-4 h-4 ${
-                              s <= otherRating.score ? "fill-gold text-gold" : "text-muted-foreground"
-                            }`}
-                          />
-                        ))}
-                      </div>
-                      {otherRating.comment && (
-                        <p className="text-sm text-muted-foreground italic">"{otherRating.comment}"</p>
-                      )}
-                    </CardContent>
-                  </Card>
-                )}
-              </>
-            )}
-          </div>
-        )}
+              {otherRating && (
+                <Card>
+                  <CardContent className="pt-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Star className="w-4 h-4 text-gold fill-gold" />
+                      <span className="font-medium text-sm">Отзыв от {otherParticipantName}</span>
+                    </div>
+                    <div className="flex gap-0.5 mb-2">
+                      {[1, 2, 3, 4, 5].map((s) => (
+                        <Star
+                          key={s}
+                          className={`w-4 h-4 ${
+                            s <= otherRating.score ? "fill-gold text-gold" : "text-muted-foreground"
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    {otherRating.comment && (
+                      <p className="text-sm text-muted-foreground italic">"{otherRating.comment}"</p>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+            </>
+          )}
+        </div>
 
         {/* Chat */}
         <div className="flex-1 flex flex-col min-h-0">
