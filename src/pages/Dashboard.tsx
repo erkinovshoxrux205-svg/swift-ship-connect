@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -6,10 +6,103 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { LogOut, User, Truck, Package, TrendingUp, Clock, Star, Loader2 } from "lucide-react";
+import { ClientDashboard } from "@/components/client/ClientDashboard";
+import { supabase } from "@/integrations/supabase/client";
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const { user, role, loading, signOut } = useAuth();
+  const [stats, setStats] = useState({
+    orders: 0,
+    activeDeals: 0,
+    completed: 0,
+    rating: null as number | null,
+  });
+
+  // Fetch stats
+  useEffect(() => {
+    const fetchStats = async () => {
+      if (!user) return;
+
+      if (role === "client") {
+        // Count client's orders
+        const { count: ordersCount } = await supabase
+          .from("orders")
+          .select("*", { count: "exact", head: true })
+          .eq("client_id", user.id);
+
+        // Count active deals
+        const { count: activeDealsCount } = await supabase
+          .from("deals")
+          .select("*", { count: "exact", head: true })
+          .eq("client_id", user.id)
+          .in("status", ["pending", "accepted", "in_transit"]);
+
+        // Count completed deals
+        const { count: completedCount } = await supabase
+          .from("deals")
+          .select("*", { count: "exact", head: true })
+          .eq("client_id", user.id)
+          .eq("status", "delivered");
+
+        // Get average rating
+        const { data: ratingsData } = await supabase
+          .from("ratings")
+          .select("score")
+          .eq("rated_id", user.id);
+
+        const avgRating = ratingsData && ratingsData.length > 0
+          ? ratingsData.reduce((acc, r) => acc + r.score, 0) / ratingsData.length
+          : null;
+
+        setStats({
+          orders: ordersCount || 0,
+          activeDeals: activeDealsCount || 0,
+          completed: completedCount || 0,
+          rating: avgRating,
+        });
+      } else if (role === "carrier") {
+        // Count open orders
+        const { count: openOrdersCount } = await supabase
+          .from("orders")
+          .select("*", { count: "exact", head: true })
+          .eq("status", "open");
+
+        // Count active deals
+        const { count: activeDealsCount } = await supabase
+          .from("deals")
+          .select("*", { count: "exact", head: true })
+          .eq("carrier_id", user.id)
+          .in("status", ["pending", "accepted", "in_transit"]);
+
+        // Count completed deals
+        const { count: completedCount } = await supabase
+          .from("deals")
+          .select("*", { count: "exact", head: true })
+          .eq("carrier_id", user.id)
+          .eq("status", "delivered");
+
+        // Get average rating
+        const { data: ratingsData } = await supabase
+          .from("ratings")
+          .select("score")
+          .eq("rated_id", user.id);
+
+        const avgRating = ratingsData && ratingsData.length > 0
+          ? ratingsData.reduce((acc, r) => acc + r.score, 0) / ratingsData.length
+          : null;
+
+        setStats({
+          orders: openOrdersCount || 0,
+          activeDeals: activeDealsCount || 0,
+          completed: completedCount || 0,
+          rating: avgRating,
+        });
+      }
+    };
+
+    fetchStats();
+  }, [user, role]);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -123,7 +216,7 @@ const Dashboard = () => {
               <Package className="w-4 h-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">0</div>
+              <div className="text-2xl font-bold">{stats.orders}</div>
               <p className="text-xs text-muted-foreground">
                 {isClient ? "всего создано" : "ожидают отклика"}
               </p>
@@ -138,7 +231,7 @@ const Dashboard = () => {
               <Clock className="w-4 h-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">0</div>
+              <div className="text-2xl font-bold">{stats.activeDeals}</div>
               <p className="text-xs text-muted-foreground">в процессе</p>
             </CardContent>
           </Card>
@@ -151,7 +244,7 @@ const Dashboard = () => {
               <TrendingUp className="w-4 h-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">0</div>
+              <div className="text-2xl font-bold">{stats.completed}</div>
               <p className="text-xs text-muted-foreground">успешных сделок</p>
             </CardContent>
           </Card>
@@ -164,29 +257,18 @@ const Dashboard = () => {
               <Star className="w-4 h-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">—</div>
-              <p className="text-xs text-muted-foreground">нет оценок</p>
+              <div className="text-2xl font-bold">
+                {stats.rating ? stats.rating.toFixed(1) : "—"}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {stats.rating ? "средняя оценка" : "нет оценок"}
+              </p>
             </CardContent>
           </Card>
         </div>
 
         {/* Role-specific content */}
-        {isClient && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Создать заявку</CardTitle>
-              <CardDescription>
-                Опишите ваш груз и маршрут для получения предложений от перевозчиков
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button variant="customer" size="lg">
-                <Package className="w-4 h-4 mr-2" />
-                Новая заявка
-              </Button>
-            </CardContent>
-          </Card>
-        )}
+        {isClient && <ClientDashboard />}
 
         {isCarrier && (
           <Card>

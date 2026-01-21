@@ -1,0 +1,202 @@
+import { useEffect, useState } from "react";
+import { format } from "date-fns";
+import { ru } from "date-fns/locale";
+import { Package, MapPin, Calendar, Weight, Ruler, MessageSquare, Eye, Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+
+interface Order {
+  id: string;
+  cargo_type: string;
+  weight: number | null;
+  length: number | null;
+  width: number | null;
+  height: number | null;
+  pickup_address: string;
+  delivery_address: string;
+  pickup_date: string;
+  description: string | null;
+  status: "open" | "in_progress" | "completed" | "cancelled";
+  created_at: string;
+  responses_count?: number;
+}
+
+const statusConfig = {
+  open: { label: "Открыта", variant: "default" as const, className: "bg-driver text-white" },
+  in_progress: { label: "В работе", variant: "default" as const, className: "bg-customer text-white" },
+  completed: { label: "Завершена", variant: "default" as const, className: "bg-gold text-white" },
+  cancelled: { label: "Отменена", variant: "secondary" as const, className: "" },
+};
+
+interface OrdersListProps {
+  refreshTrigger?: number;
+}
+
+export const OrdersList = ({ refreshTrigger }: OrdersListProps) => {
+  const { user } = useAuth();
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchOrders = async () => {
+    if (!user) return;
+
+    setLoading(true);
+    
+    const { data, error } = await supabase
+      .from("orders")
+      .select("*")
+      .eq("client_id", user.id)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Error fetching orders:", error);
+    } else {
+      // Get response counts for each order
+      const ordersWithCounts = await Promise.all(
+        (data || []).map(async (order) => {
+          const { count } = await supabase
+            .from("responses")
+            .select("*", { count: "exact", head: true })
+            .eq("order_id", order.id);
+          
+          return { ...order, responses_count: count || 0 };
+        })
+      );
+      setOrders(ordersWithCounts);
+    }
+    
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchOrders();
+  }, [user, refreshTrigger]);
+
+  if (loading) {
+    return (
+      <Card>
+        <CardContent className="py-12 text-center">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto text-muted-foreground" />
+          <p className="mt-2 text-muted-foreground">Загрузка заявок...</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (orders.length === 0) {
+    return (
+      <Card>
+        <CardContent className="py-12 text-center">
+          <Package className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
+          <p className="text-muted-foreground">У вас пока нет заявок</p>
+          <p className="text-sm text-muted-foreground">Создайте первую заявку выше</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Мои заявки</CardTitle>
+        <CardDescription>
+          Всего заявок: {orders.length}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {orders.map((order) => {
+          const status = statusConfig[order.status];
+          
+          return (
+            <div
+              key={order.id}
+              className="p-4 rounded-xl border bg-card hover:shadow-md transition-shadow"
+            >
+              <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                {/* Main Info */}
+                <div className="flex-1 space-y-3">
+                  {/* Header */}
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <h3 className="font-semibold text-lg">{order.cargo_type}</h3>
+                    <Badge className={status.className}>
+                      {status.label}
+                    </Badge>
+                    {order.responses_count && order.responses_count > 0 && (
+                      <Badge variant="outline" className="gap-1">
+                        <MessageSquare className="w-3 h-3" />
+                        {order.responses_count} откликов
+                      </Badge>
+                    )}
+                  </div>
+
+                  {/* Route */}
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-sm">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <MapPin className="w-4 h-4 text-driver shrink-0" />
+                      <span className="truncate">{order.pickup_address}</span>
+                    </div>
+                    <span className="hidden sm:block text-muted-foreground">→</span>
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <MapPin className="w-4 h-4 text-customer shrink-0" />
+                      <span className="truncate">{order.delivery_address}</span>
+                    </div>
+                  </div>
+
+                  {/* Details */}
+                  <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-1">
+                      <Calendar className="w-4 h-4" />
+                      {format(new Date(order.pickup_date), "d MMMM yyyy", { locale: ru })}
+                    </div>
+                    {order.weight && (
+                      <div className="flex items-center gap-1">
+                        <Weight className="w-4 h-4" />
+                        {order.weight} кг
+                      </div>
+                    )}
+                    {(order.length || order.width || order.height) && (
+                      <div className="flex items-center gap-1">
+                        <Ruler className="w-4 h-4" />
+                        {[order.length, order.width, order.height].filter(Boolean).join(" × ")} м
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Description */}
+                  {order.description && (
+                    <p className="text-sm text-muted-foreground line-clamp-2">
+                      {order.description}
+                    </p>
+                  )}
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm">
+                    <Eye className="w-4 h-4 mr-1" />
+                    Подробнее
+                  </Button>
+                  {order.status === "open" && order.responses_count && order.responses_count > 0 && (
+                    <Button variant="customer" size="sm">
+                      <MessageSquare className="w-4 h-4 mr-1" />
+                      Отклики
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </CardContent>
+    </Card>
+  );
+};
