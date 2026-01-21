@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { Package, MapPin, Calendar, Weight, Ruler, MessageSquare, Eye, Loader2 } from "lucide-react";
@@ -43,6 +44,7 @@ interface OrdersListProps {
 
 export const OrdersList = ({ refreshTrigger }: OrdersListProps) => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -181,14 +183,22 @@ export const OrdersList = ({ refreshTrigger }: OrdersListProps) => {
 
                 {/* Actions */}
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => navigate(`/orders/${order.id}/responses`)}
+                  >
                     <Eye className="w-4 h-4 mr-1" />
                     Подробнее
                   </Button>
                   {order.status === "open" && order.responses_count && order.responses_count > 0 && (
-                    <Button variant="customer" size="sm">
+                    <Button 
+                      variant="customer" 
+                      size="sm"
+                      onClick={() => navigate(`/orders/${order.id}/responses`)}
+                    >
                       <MessageSquare className="w-4 h-4 mr-1" />
-                      Отклики
+                      Отклики ({order.responses_count})
                     </Button>
                   )}
                 </div>
