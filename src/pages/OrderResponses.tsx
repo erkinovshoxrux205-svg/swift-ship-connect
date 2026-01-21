@@ -4,7 +4,7 @@ import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { 
   ArrowLeft, Package, MapPin, Calendar, Weight, Ruler, 
-  User, Star, Clock, CheckCircle, Loader2, MessageSquare 
+  User, Star, Clock, CheckCircle, Loader2, MessageSquare, Banknote 
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -30,6 +30,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { PriceNegotiation } from "@/components/negotiations/PriceNegotiation";
 
 interface Order {
   id: string;
@@ -43,6 +49,7 @@ interface Order {
   pickup_date: string;
   description: string | null;
   status: string;
+  client_price: number | null;
 }
 
 interface Response {
@@ -75,6 +82,7 @@ const OrderResponses = () => {
   const [accepting, setAccepting] = useState(false);
   const [selectedResponse, setSelectedResponse] = useState<Response | null>(null);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [expandedNegotiation, setExpandedNegotiation] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -329,15 +337,15 @@ const OrderResponses = () => {
                 }`}
               >
                 <CardContent className="p-6">
-                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                  <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
                     {/* Carrier Info */}
-                    <div className="flex items-start gap-4">
+                    <div className="flex items-start gap-4 flex-1">
                       <Avatar className="w-12 h-12">
                         <AvatarFallback className="gradient-driver text-white">
                           {response.carrier_profile?.full_name?.charAt(0) || "П"}
                         </AvatarFallback>
                       </Avatar>
-                        <div className="space-y-1">
+                      <div className="space-y-1 flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
                           <Link 
                             to={`/profile/${response.carrier_id}`}
@@ -380,11 +388,16 @@ const OrderResponses = () => {
                     </div>
 
                     {/* Price & Actions */}
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                    <div className="flex flex-col items-end gap-3">
                       <div className="text-right">
                         <div className="text-2xl font-bold text-driver">
                           {response.price.toLocaleString()} ₽
                         </div>
+                        {order.client_price && response.price !== order.client_price && (
+                          <div className="text-xs text-muted-foreground">
+                            Вы предлагали: {order.client_price.toLocaleString()} ₽
+                          </div>
+                        )}
                         {response.delivery_time && (
                           <div className="text-sm text-muted-foreground">
                             Срок: {response.delivery_time}
@@ -392,17 +405,52 @@ const OrderResponses = () => {
                         )}
                       </div>
 
-                      {order.status === "open" && !response.is_accepted && (
-                        <Button
-                          variant="driver"
-                          onClick={() => handleAcceptResponse(response)}
-                        >
-                          <CheckCircle className="w-4 h-4 mr-2" />
-                          Принять
-                        </Button>
-                      )}
+                      <div className="flex gap-2">
+                        {order.status === "open" && !response.is_accepted && (
+                          <>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setExpandedNegotiation(
+                                expandedNegotiation === response.id ? null : response.id
+                              )}
+                            >
+                              <Banknote className="w-4 h-4 mr-1" />
+                              Торг
+                            </Button>
+                            <Button
+                              variant="driver"
+                              size="sm"
+                              onClick={() => handleAcceptResponse(response)}
+                            >
+                              <CheckCircle className="w-4 h-4 mr-1" />
+                              Принять
+                            </Button>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
+
+                  {/* Negotiation Panel */}
+                  {expandedNegotiation === response.id && order.status === "open" && (
+                    <div className="mt-4 pt-4 border-t">
+                      <PriceNegotiation
+                        orderId={order.id}
+                        responseId={response.id}
+                        clientId={user?.id || ""}
+                        carrierId={response.carrier_id}
+                        currentPrice={response.price}
+                        clientPrice={order.client_price}
+                        onPriceAgreed={(newPrice) => {
+                          // Update the response price in state
+                          setResponses(prev => prev.map(r => 
+                            r.id === response.id ? { ...r, price: newPrice } : r
+                          ));
+                        }}
+                      />
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             ))}
