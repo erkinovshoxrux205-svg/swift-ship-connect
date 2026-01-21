@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { 
@@ -189,9 +189,13 @@ export const MyDealsList = () => {
                     <span className="font-semibold text-driver">
                       {deal.agreed_price.toLocaleString()} ₽
                     </span>
-                    <span className="text-muted-foreground">
+                    <Link 
+                      to={`/profile/${role === "client" ? deal.carrier_id : deal.client_id}`}
+                      className="text-muted-foreground hover:text-primary underline-offset-2 hover:underline transition-colors"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       {role === "client" ? "Перевозчик" : "Клиент"}: {deal.other_profile?.full_name || "—"}
-                    </span>
+                    </Link>
                   </div>
                 </div>
 

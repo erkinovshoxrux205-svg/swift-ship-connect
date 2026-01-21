@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { 
@@ -337,11 +337,15 @@ const OrderResponses = () => {
                           {response.carrier_profile?.full_name?.charAt(0) || "П"}
                         </AvatarFallback>
                       </Avatar>
-                      <div className="space-y-1">
+                        <div className="space-y-1">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-semibold">
+                          <Link 
+                            to={`/profile/${response.carrier_id}`}
+                            className="font-semibold hover:text-driver underline-offset-2 hover:underline transition-colors"
+                            onClick={(e) => e.stopPropagation()}
+                          >
                             {response.carrier_profile?.full_name || "Перевозчик"}
-                          </span>
+                          </Link>
                           {response.carrier_profile?.is_verified && (
                             <Badge variant="outline" className="text-driver border-driver">
                               <CheckCircle className="w-3 h-3 mr-1" />
