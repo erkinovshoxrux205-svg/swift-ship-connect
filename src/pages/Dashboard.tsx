@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -11,10 +12,13 @@ import { CarrierDashboard } from "@/components/carrier/CarrierDashboard";
 import { NotificationToggle } from "@/components/notifications/NotificationToggle";
 import { NotificationCenter } from "@/components/notifications/NotificationCenter";
 import { AIChatBot } from "@/components/ai/AIChatBot";
+import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
 import { supabase } from "@/integrations/supabase/client";
+
 const Dashboard = () => {
   const navigate = useNavigate();
   const { user, role, loading, signOut } = useAuth();
+  const { t } = useLanguage();
   const [stats, setStats] = useState({
     orders: 0,
     activeDeals: 0,
@@ -28,27 +32,23 @@ const Dashboard = () => {
       if (!user) return;
 
       if (role === "client") {
-        // Count client's orders
         const { count: ordersCount } = await supabase
           .from("orders")
           .select("*", { count: "exact", head: true })
           .eq("client_id", user.id);
 
-        // Count active deals
         const { count: activeDealsCount } = await supabase
           .from("deals")
           .select("*", { count: "exact", head: true })
           .eq("client_id", user.id)
           .in("status", ["pending", "accepted", "in_transit"]);
 
-        // Count completed deals
         const { count: completedCount } = await supabase
           .from("deals")
           .select("*", { count: "exact", head: true })
           .eq("client_id", user.id)
           .eq("status", "delivered");
 
-        // Get average rating
         const { data: ratingsData } = await supabase
           .from("ratings")
           .select("score")
@@ -65,27 +65,23 @@ const Dashboard = () => {
           rating: avgRating,
         });
       } else if (role === "carrier") {
-        // Count open orders
         const { count: openOrdersCount } = await supabase
           .from("orders")
           .select("*", { count: "exact", head: true })
           .eq("status", "open");
 
-        // Count active deals
         const { count: activeDealsCount } = await supabase
           .from("deals")
           .select("*", { count: "exact", head: true })
           .eq("carrier_id", user.id)
           .in("status", ["pending", "accepted", "in_transit"]);
 
-        // Count completed deals
         const { count: completedCount } = await supabase
           .from("deals")
           .select("*", { count: "exact", head: true })
           .eq("carrier_id", user.id)
           .eq("status", "delivered");
 
-        // Get average rating
         const { data: ratingsData } = await supabase
           .from("ratings")
           .select("score")
@@ -135,13 +131,13 @@ const Dashboard = () => {
   const getRoleLabel = () => {
     switch (role) {
       case "client":
-        return "Клиент";
+        return t("role.client");
       case "carrier":
-        return "Перевозчик";
+        return t("role.carrier");
       case "admin":
-        return "Администратор";
+        return t("role.admin");
       default:
-        return "Пользователь";
+        return t("role.client");
     }
   };
 
@@ -158,17 +154,6 @@ const Dashboard = () => {
     }
   };
 
-  const getRoleVariant = () => {
-    switch (role) {
-      case "client":
-        return "customer";
-      case "carrier":
-        return "driver";
-      default:
-        return "default";
-    }
-  };
-
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -182,6 +167,7 @@ const Dashboard = () => {
             </Badge>
           </div>
           <div className="flex items-center gap-2">
+            <LanguageSwitcher />
             <NotificationCenter />
             <NotificationToggle />
             <Button
@@ -199,7 +185,7 @@ const Dashboard = () => {
             </Button>
             <Button variant="ghost" size="sm" onClick={handleSignOut}>
               <LogOut className="w-4 h-4 mr-2" />
-              Выйти
+              {t("auth.logout")}
             </Button>
           </div>
         </div>
@@ -209,12 +195,12 @@ const Dashboard = () => {
       <main className="container mx-auto px-4 py-8">
         <div className="mb-8">
           <h2 className="text-2xl font-bold mb-2">
-            Добро пожаловать, {user.email?.split("@")[0]}!
+            {t("nav.dashboard")}, {user.email?.split("@")[0]}!
           </h2>
           <p className="text-muted-foreground">
-            {isClient && "Создавайте заявки и управляйте своими перевозками"}
-            {isCarrier && "Просматривайте доступные заявки и выполняйте заказы"}
-            {isAdmin && "Управляйте платформой и пользователями"}
+            {isClient && t("orders.create")}
+            {isCarrier && t("orders.available")}
+            {isAdmin && t("nav.settings")}
           </p>
         </div>
 
@@ -223,48 +209,43 @@ const Dashboard = () => {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                {isClient ? "Мои заявки" : "Доступные заявки"}
+                {isClient ? t("orders.myOrders") : t("orders.available")}
               </CardTitle>
               <Package className="w-4 h-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.orders}</div>
-              <p className="text-xs text-muted-foreground">
-                {isClient ? "всего создано" : "ожидают отклика"}
-              </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                Активные сделки
+                {t("carrier.inProgress")}
               </CardTitle>
               <Clock className="w-4 h-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.activeDeals}</div>
-              <p className="text-xs text-muted-foreground">в процессе</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                Завершено
+                {t("carrier.completed")}
               </CardTitle>
               <TrendingUp className="w-4 h-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.completed}</div>
-              <p className="text-xs text-muted-foreground">успешных сделок</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                Рейтинг
+                {t("carrier.rating")}
               </CardTitle>
               <Star className="w-4 h-4 text-muted-foreground" />
             </CardHeader>
@@ -272,16 +253,12 @@ const Dashboard = () => {
               <div className="text-2xl font-bold">
                 {stats.rating ? stats.rating.toFixed(1) : "—"}
               </div>
-              <p className="text-xs text-muted-foreground">
-                {stats.rating ? "средняя оценка" : "нет оценок"}
-              </p>
             </CardContent>
           </Card>
         </div>
 
         {/* Role-specific content */}
         {isClient && <ClientDashboard />}
-
         {isCarrier && <CarrierDashboard />}
 
         {isAdmin && (
@@ -289,15 +266,15 @@ const Dashboard = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Shield className="w-5 h-5" />
-                Панель администратора
+                {t("role.admin")}
               </CardTitle>
               <CardDescription>
-                Управление пользователями, сделками и аналитика платформы
+                {t("nav.settings")}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <Button onClick={() => navigate("/admin")}>
-                Открыть админ-панель
+                {t("nav.dashboard")}
               </Button>
             </CardContent>
           </Card>
