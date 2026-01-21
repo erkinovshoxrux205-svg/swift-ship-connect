@@ -1,8 +1,9 @@
 import { useState, useMemo } from "react";
 import { 
   MapPin, Navigation, Truck, Calculator, DollarSign, 
-  Banknote, ArrowRightLeft, Info 
+  Banknote, ArrowRightLeft, Info, Map
 } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,6 +29,12 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { RouteMap } from "@/components/map/RouteMap";
 
 // Central Asian cities with coordinates
 const centralAsianCities = {
@@ -74,12 +81,10 @@ const countryFlags: Record<string, string> = {
 };
 
 // Pricing in UZS
-const BASE_RATE_UZS = 50000; // Base rate
-const PRICE_PER_KM_UZS = 1500; // Per km
-const PRICE_PER_KG_UZS = 100; // Per kg
-const CROSS_BORDER_FEE_UZS = 500000; // Cross-border fee
-
-// Exchange rate (can be updated)
+const BASE_RATE_UZS = 50000;
+const PRICE_PER_KM_UZS = 1500;
+const PRICE_PER_KG_UZS = 100;
+const CROSS_BORDER_FEE_UZS = 500000;
 const USD_RATE = 12750;
 
 type VehicleType = "gazelle" | "truck" | "trailer";
@@ -90,7 +95,6 @@ const vehicleConfig: Record<VehicleType, { name: string; multiplier: number; max
   trailer: { name: "Fura (20t)", multiplier: 2.5, maxWeight: 20000 },
 };
 
-// Haversine formula
 const haversineDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
   const R = 6371;
   const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -104,13 +108,25 @@ const haversineDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
 };
 
 export const CentralAsiaRouteCalculator = () => {
+  const { t } = useLanguage();
   const [fromCity, setFromCity] = useState<string>("");
   const [toCity, setToCity] = useState<string>("");
   const [weight, setWeight] = useState<number>(500);
   const [vehicleType, setVehicleType] = useState<VehicleType>("gazelle");
   const [showUSD, setShowUSD] = useState(false);
+  const [showMap, setShowMap] = useState(false);
 
   const cities = Object.keys(centralAsianCities);
+
+  const fromCityData = fromCity ? {
+    name: fromCity,
+    ...centralAsianCities[fromCity as keyof typeof centralAsianCities]
+  } : null;
+
+  const toCityData = toCity ? {
+    name: toCity,
+    ...centralAsianCities[toCity as keyof typeof centralAsianCities]
+  } : null;
 
   const calculation = useMemo(() => {
     if (!fromCity || !toCity || fromCity === toCity) {
@@ -120,17 +136,12 @@ export const CentralAsiaRouteCalculator = () => {
     const from = centralAsianCities[fromCity as keyof typeof centralAsianCities];
     const to = centralAsianCities[toCity as keyof typeof centralAsianCities];
 
-    // Distance calculation (road distance ~ 1.3x straight line)
     const straightDistance = haversineDistance(from.lat, from.lon, to.lat, to.lon);
     const roadDistance = Math.round(straightDistance * 1.3);
 
-    // Cross-border check
     const isCrossBorder = from.country !== to.country;
-
-    // Vehicle config
     const vehicle = vehicleConfig[vehicleType];
 
-    // Cost calculation
     const baseCost = BASE_RATE_UZS;
     const distanceCost = roadDistance * PRICE_PER_KM_UZS;
     const weightCost = weight * PRICE_PER_KG_UZS;
@@ -159,7 +170,7 @@ export const CentralAsiaRouteCalculator = () => {
     if (isUSD) {
       return `$${(amount / USD_RATE).toFixed(2)}`;
     }
-    return `${amount.toLocaleString("ru-RU")} so'm`;
+    return `${amount.toLocaleString("ru-RU")} ${t("common.currency")}`;
   };
 
   return (
@@ -167,10 +178,10 @@ export const CentralAsiaRouteCalculator = () => {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Calculator className="w-5 h-5" />
-          Yetkazib berish kalkulyatori
+          {t("calculator.title")}
         </CardTitle>
         <CardDescription>
-          Markaziy Osiyo shaharlari o'rtasida narxni hisoblang
+          {t("calculator.description")}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -179,11 +190,11 @@ export const CentralAsiaRouteCalculator = () => {
           <div className="space-y-2">
             <Label className="flex items-center gap-2">
               <MapPin className="w-4 h-4 text-green-500" />
-              Qayerdan
+              {t("calculator.from")}
             </Label>
             <Select value={fromCity} onValueChange={setFromCity}>
               <SelectTrigger>
-                <SelectValue placeholder="Shaharni tanlang" />
+                <SelectValue placeholder={t("calculator.selectCity")} />
               </SelectTrigger>
               <SelectContent>
                 {cities.map((city) => {
@@ -201,11 +212,11 @@ export const CentralAsiaRouteCalculator = () => {
           <div className="space-y-2">
             <Label className="flex items-center gap-2">
               <Navigation className="w-4 h-4 text-red-500" />
-              Qayerga
+              {t("calculator.to")}
             </Label>
             <Select value={toCity} onValueChange={setToCity}>
               <SelectTrigger>
-                <SelectValue placeholder="Shaharni tanlang" />
+                <SelectValue placeholder={t("calculator.selectCity")} />
               </SelectTrigger>
               <SelectContent>
                 {cities.map((city) => {
@@ -224,7 +235,7 @@ export const CentralAsiaRouteCalculator = () => {
         {/* Weight & Vehicle */}
         <div className="grid md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label>Yuk og'irligi (kg)</Label>
+            <Label>{t("calculator.cargoWeight")} ({t("common.kg")})</Label>
             <Input
               type="number"
               value={weight}
@@ -232,15 +243,12 @@ export const CentralAsiaRouteCalculator = () => {
               min={1}
               max={vehicleConfig[vehicleType].maxWeight}
             />
-            <p className="text-xs text-muted-foreground">
-              Maks: {vehicleConfig[vehicleType].maxWeight.toLocaleString()} kg
-            </p>
           </div>
 
           <div className="space-y-2">
             <Label className="flex items-center gap-2">
               <Truck className="w-4 h-4" />
-              Transport turi
+              {t("calculator.vehicleType")}
             </Label>
             <Select value={vehicleType} onValueChange={(v) => setVehicleType(v as VehicleType)}>
               <SelectTrigger>
@@ -261,7 +269,7 @@ export const CentralAsiaRouteCalculator = () => {
         <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
           <div className="flex items-center gap-2">
             <Banknote className="w-4 h-4" />
-            <span className="text-sm">Valyuta</span>
+            <span className="text-sm">{t("calculator.currency")}</span>
           </div>
           <div className="flex items-center gap-2">
             <span className={`text-sm ${!showUSD ? "font-bold" : ""}`}>UZS</span>
@@ -269,6 +277,25 @@ export const CentralAsiaRouteCalculator = () => {
             <span className={`text-sm ${showUSD ? "font-bold" : ""}`}>USD</span>
           </div>
         </div>
+
+        {/* Map Toggle */}
+        {fromCity && toCity && fromCity !== toCity && (
+          <Collapsible open={showMap} onOpenChange={setShowMap}>
+            <CollapsibleTrigger asChild>
+              <Button variant="outline" className="w-full">
+                <Map className="w-4 h-4 mr-2" />
+                {t("map.showOnMap")}
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-4">
+              <RouteMap 
+                fromCity={fromCityData} 
+                toCity={toCityData} 
+                distance={calculation?.distance}
+              />
+            </CollapsibleContent>
+          </Collapsible>
+        )}
 
         {/* Results */}
         {calculation && (
@@ -285,41 +312,40 @@ export const CentralAsiaRouteCalculator = () => {
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-sm text-muted-foreground">Masofa</p>
-                <p className="text-xl font-bold">{calculation.distance} km</p>
+                <p className="text-sm text-muted-foreground">{t("calculator.distance")}</p>
+                <p className="text-xl font-bold">{calculation.distance} {t("common.km")}</p>
               </div>
             </div>
 
-            {/* Cross-border warning */}
             {calculation.isCrossBorder && (
               <Badge variant="outline" className="w-full justify-center py-2">
-                🛂 Xalqaro tashish - qo'shimcha chegara to'lovi
+                🛂 {t("calculator.internationalShipping")}
               </Badge>
             )}
 
             {/* Cost Breakdown */}
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Bazaviy narx</span>
+                <span className="text-muted-foreground">{t("calculator.basePrice")}</span>
                 <span>{formatCurrency(calculation.baseCost)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Masofa ({calculation.distance} km)</span>
+                <span className="text-muted-foreground">{t("calculator.distancePrice")} ({calculation.distance} {t("common.km")})</span>
                 <span>{formatCurrency(calculation.distanceCost)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Og'irlik ({weight} kg)</span>
+                <span className="text-muted-foreground">{t("calculator.weightPrice")} ({weight} {t("common.kg")})</span>
                 <span>{formatCurrency(calculation.weightCost)}</span>
               </div>
               {calculation.vehicleCost > 0 && (
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Transport ustamasi</span>
+                  <span className="text-muted-foreground">{t("calculator.vehicleSurcharge")}</span>
                   <span>{formatCurrency(calculation.vehicleCost)}</span>
                 </div>
               )}
               {calculation.borderFee > 0 && (
                 <div className="flex justify-between text-orange-600">
-                  <span>Chegara to'lovi</span>
+                  <span>{t("calculator.borderFee")}</span>
                   <span>{formatCurrency(calculation.borderFee)}</span>
                 </div>
               )}
@@ -334,18 +360,18 @@ export const CentralAsiaRouteCalculator = () => {
                   ) : (
                     <Banknote className="w-5 h-5" />
                   )}
-                  <span className="font-medium">Jami narx</span>
+                  <span className="font-medium">{t("calculator.totalPrice")}</span>
                 </div>
                 <div className="text-right">
                   <p className="text-2xl font-bold">
                     {showUSD 
                       ? `$${calculation.totalUSD.toFixed(2)}` 
-                      : `${calculation.totalUZS.toLocaleString("ru-RU")} so'm`
+                      : `${calculation.totalUZS.toLocaleString("ru-RU")} ${t("common.currency")}`
                     }
                   </p>
                   <p className="text-xs opacity-80">
                     {showUSD 
-                      ? `≈ ${calculation.totalUZS.toLocaleString("ru-RU")} so'm`
+                      ? `≈ ${calculation.totalUZS.toLocaleString("ru-RU")} ${t("common.currency")}`
                       : `≈ $${calculation.totalUSD.toFixed(2)}`
                     }
                   </p>
@@ -353,17 +379,16 @@ export const CentralAsiaRouteCalculator = () => {
               </div>
             </div>
 
-            {/* Disclaimer */}
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <p className="text-xs text-muted-foreground text-center flex items-center justify-center gap-1 cursor-help">
                     <Info className="w-3 h-3" />
-                    Taxminiy narx. Kurs: 1 USD = {USD_RATE.toLocaleString()} so'm
+                    {t("calculator.approximatePrice")}. {t("calculator.exchangeRate")}: 1 USD = {USD_RATE.toLocaleString()} {t("common.currency")}
                   </p>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Yakuniy narx transport turini va boshqa omillarni hisobga oladi</p>
+                  <p>{t("calculator.approximatePrice")}</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
