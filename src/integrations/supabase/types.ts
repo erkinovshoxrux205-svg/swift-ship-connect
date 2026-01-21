@@ -406,6 +406,7 @@ export type Database = {
           id: string
           is_verified: boolean | null
           phone: string | null
+          referral_code: string | null
           updated_at: string
           user_id: string
           vehicle_type: string | null
@@ -419,6 +420,7 @@ export type Database = {
           id?: string
           is_verified?: boolean | null
           phone?: string | null
+          referral_code?: string | null
           updated_at?: string
           user_id: string
           vehicle_type?: string | null
@@ -432,6 +434,7 @@ export type Database = {
           id?: string
           is_verified?: boolean | null
           phone?: string | null
+          referral_code?: string | null
           updated_at?: string
           user_id?: string
           vehicle_type?: string | null
@@ -589,6 +592,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      referrals: {
+        Row: {
+          bonus_paid: boolean | null
+          bonus_paid_at: string | null
+          created_at: string
+          id: string
+          referral_code: string
+          referred_id: string
+          referrer_id: string
+        }
+        Insert: {
+          bonus_paid?: boolean | null
+          bonus_paid_at?: string | null
+          created_at?: string
+          id?: string
+          referral_code: string
+          referred_id: string
+          referrer_id: string
+        }
+        Update: {
+          bonus_paid?: boolean | null
+          bonus_paid_at?: string | null
+          created_at?: string
+          id?: string
+          referral_code?: string
+          referred_id?: string
+          referrer_id?: string
+        }
+        Relationships: []
       }
       responses: {
         Row: {

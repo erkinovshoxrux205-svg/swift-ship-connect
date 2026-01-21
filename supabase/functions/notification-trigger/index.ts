@@ -147,7 +147,7 @@ serve(async (req) => {
             url: `/deals/${deal.id}/chat`,
           });
 
-          // For delivered status, also notify carrier
+          // For delivered status, also notify carrier and award loyalty points
           if (deal.status === "delivered") {
             notifications.push({
               userId: dealData.carrier_id,
@@ -155,6 +155,65 @@ serve(async (req) => {
               body: "Не забудьте оставить отзыв о клиенте!",
               url: `/deals/${deal.id}/chat`,
             });
+
+            // Award 100 loyalty points to client
+            try {
+              await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/loyalty-service`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+                },
+                body: JSON.stringify({
+                  type: "deal_delivered",
+                  user_id: dealData.client_id,
+                  amount: 100,
+                  reason: "Завершённая доставка",
+                  reference_id: deal.id,
+                }),
+              });
+              console.log("Loyalty points awarded for deal:", deal.id);
+            } catch (loyaltyError) {
+              console.error("Error awarding loyalty points:", loyaltyError);
+            }
+
+            // Check for referral bonus
+            const { data: referralData } = await supabase
+              .from("referrals")
+              .select("*")
+              .eq("referred_id", dealData.client_id)
+              .eq("bonus_paid", false)
+              .single();
+
+            if (referralData) {
+              // This is the first completed delivery for a referred user
+              try {
+                await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/loyalty-service`, {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+                  },
+                  body: JSON.stringify({
+                    type: "referral_bonus",
+                    user_id: referralData.referrer_id,
+                    amount: 200,
+                    reason: "Реферальный бонус за первую доставку друга",
+                    reference_id: referralData.id,
+                  }),
+                });
+
+                // Mark referral bonus as paid
+                await supabase
+                  .from("referrals")
+                  .update({ bonus_paid: true, bonus_paid_at: new Date().toISOString() })
+                  .eq("id", referralData.id);
+
+                console.log("Referral bonus awarded for referral:", referralData.id);
+              } catch (refError) {
+                console.error("Error awarding referral bonus:", refError);
+              }
+            }
           }
         }
       }

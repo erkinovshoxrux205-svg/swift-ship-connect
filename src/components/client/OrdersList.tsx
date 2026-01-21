@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { format } from "date-fns";
+import { format, differenceInHours } from "date-fns";
 import { ru } from "date-fns/locale";
-import { Package, MapPin, Calendar, Weight, Ruler, MessageSquare, Eye, Loader2 } from "lucide-react";
+import { Package, MapPin, Calendar, Weight, Ruler, MessageSquare, Eye, Loader2, Pencil, X, Image as ImageIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,6 +15,24 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Order {
   id: string;
@@ -26,6 +45,7 @@ interface Order {
   delivery_address: string;
   pickup_date: string;
   description: string | null;
+  photo_urls: string[] | null;
   status: "open" | "in_progress" | "completed" | "cancelled";
   created_at: string;
   responses_count?: number;
@@ -45,8 +65,12 @@ interface OrdersListProps {
 export const OrdersList = ({ refreshTrigger }: OrdersListProps) => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [cancelling, setCancelling] = useState(false);
 
   const fetchOrders = async () => {
     if (!user) return;
@@ -83,6 +107,45 @@ export const OrdersList = ({ refreshTrigger }: OrdersListProps) => {
     fetchOrders();
   }, [user, refreshTrigger]);
 
+  const canEditOrCancel = (order: Order) => {
+    if (order.status !== "open") return false;
+    const hoursSinceCreation = differenceInHours(new Date(), new Date(order.created_at));
+    return hoursSinceCreation < 24;
+  };
+
+  const handleCancelOrder = async () => {
+    if (!selectedOrder) return;
+    
+    setCancelling(true);
+    
+    const { error } = await supabase
+      .from("orders")
+      .update({ status: "cancelled" })
+      .eq("id", selectedOrder.id);
+
+    setCancelling(false);
+    setCancelDialogOpen(false);
+
+    if (error) {
+      toast({
+        title: "Ошибка",
+        description: "Не удалось отменить заявку",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Заявка отменена",
+        description: "Ваша заявка была успешно отменена",
+      });
+      fetchOrders();
+    }
+  };
+
+  const openCancelDialog = (order: Order) => {
+    setSelectedOrder(order);
+    setCancelDialogOpen(true);
+  };
+
   if (loading) {
     return (
       <Card>
@@ -107,106 +170,156 @@ export const OrdersList = ({ refreshTrigger }: OrdersListProps) => {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Мои заявки</CardTitle>
-        <CardDescription>
-          Всего заявок: {orders.length}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {orders.map((order) => {
-          const status = statusConfig[order.status];
-          
-          return (
-            <div
-              key={order.id}
-              className="p-4 rounded-xl border bg-card hover:shadow-md transition-shadow"
-            >
-              <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
-                {/* Main Info */}
-                <div className="flex-1 space-y-3">
-                  {/* Header */}
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <h3 className="font-semibold text-lg">{order.cargo_type}</h3>
-                    <Badge className={status.className}>
-                      {status.label}
-                    </Badge>
-                    {order.responses_count && order.responses_count > 0 && (
-                      <Badge variant="outline" className="gap-1">
-                        <MessageSquare className="w-3 h-3" />
-                        {order.responses_count} откликов
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle>Мои заявки</CardTitle>
+          <CardDescription>
+            Всего заявок: {orders.length}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {orders.map((order) => {
+            const status = statusConfig[order.status];
+            const editable = canEditOrCancel(order);
+            
+            return (
+              <div
+                key={order.id}
+                className="p-4 rounded-xl border bg-card hover:shadow-md transition-shadow"
+              >
+                <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                  {/* Main Info */}
+                  <div className="flex-1 space-y-3">
+                    {/* Header */}
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <h3 className="font-semibold text-lg">{order.cargo_type}</h3>
+                      <Badge className={status.className}>
+                        {status.label}
                       </Badge>
-                    )}
-                  </div>
+                      {order.responses_count && order.responses_count > 0 && (
+                        <Badge variant="outline" className="gap-1">
+                          <MessageSquare className="w-3 h-3" />
+                          {order.responses_count} откликов
+                        </Badge>
+                      )}
+                      {order.photo_urls && order.photo_urls.length > 0 && (
+                        <Badge variant="outline" className="gap-1">
+                          <ImageIcon className="w-3 h-3" />
+                          {order.photo_urls.length} фото
+                        </Badge>
+                      )}
+                      {editable && (
+                        <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-200">
+                          Можно изменить
+                        </Badge>
+                      )}
+                    </div>
 
-                  {/* Route */}
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-sm">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <MapPin className="w-4 h-4 text-driver shrink-0" />
-                      <span className="truncate">{order.pickup_address}</span>
-                    </div>
-                    <span className="hidden sm:block text-muted-foreground">→</span>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <MapPin className="w-4 h-4 text-customer shrink-0" />
-                      <span className="truncate">{order.delivery_address}</span>
-                    </div>
-                  </div>
-
-                  {/* Details */}
-                  <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <Calendar className="w-4 h-4" />
-                      {format(new Date(order.pickup_date), "d MMMM yyyy", { locale: ru })}
-                    </div>
-                    {order.weight && (
-                      <div className="flex items-center gap-1">
-                        <Weight className="w-4 h-4" />
-                        {order.weight} кг
+                    {/* Route */}
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-sm">
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <MapPin className="w-4 h-4 text-driver shrink-0" />
+                        <span className="truncate">{order.pickup_address}</span>
                       </div>
-                    )}
-                    {(order.length || order.width || order.height) && (
-                      <div className="flex items-center gap-1">
-                        <Ruler className="w-4 h-4" />
-                        {[order.length, order.width, order.height].filter(Boolean).join(" × ")} м
+                      <span className="hidden sm:block text-muted-foreground">→</span>
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <MapPin className="w-4 h-4 text-customer shrink-0" />
+                        <span className="truncate">{order.delivery_address}</span>
                       </div>
+                    </div>
+
+                    {/* Details */}
+                    <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <Calendar className="w-4 h-4" />
+                        {format(new Date(order.pickup_date), "d MMMM yyyy", { locale: ru })}
+                      </div>
+                      {order.weight && (
+                        <div className="flex items-center gap-1">
+                          <Weight className="w-4 h-4" />
+                          {order.weight} кг
+                        </div>
+                      )}
+                      {(order.length || order.width || order.height) && (
+                        <div className="flex items-center gap-1">
+                          <Ruler className="w-4 h-4" />
+                          {[order.length, order.width, order.height].filter(Boolean).join(" × ")} м
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Description */}
+                    {order.description && (
+                      <p className="text-sm text-muted-foreground line-clamp-2">
+                        {order.description}
+                      </p>
                     )}
                   </div>
 
-                  {/* Description */}
-                  {order.description && (
-                    <p className="text-sm text-muted-foreground line-clamp-2">
-                      {order.description}
-                    </p>
-                  )}
-                </div>
-
-                {/* Actions */}
-                <div className="flex gap-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => navigate(`/orders/${order.id}/responses`)}
-                  >
-                    <Eye className="w-4 h-4 mr-1" />
-                    Подробнее
-                  </Button>
-                  {order.status === "open" && order.responses_count && order.responses_count > 0 && (
+                  {/* Actions */}
+                  <div className="flex flex-wrap gap-2">
                     <Button 
-                      variant="customer" 
+                      variant="outline" 
                       size="sm"
                       onClick={() => navigate(`/orders/${order.id}/responses`)}
                     >
-                      <MessageSquare className="w-4 h-4 mr-1" />
-                      Отклики ({order.responses_count})
+                      <Eye className="w-4 h-4 mr-1" />
+                      Подробнее
                     </Button>
-                  )}
+                    {order.status === "open" && order.responses_count && order.responses_count > 0 && (
+                      <Button 
+                        variant="customer" 
+                        size="sm"
+                        onClick={() => navigate(`/orders/${order.id}/responses`)}
+                      >
+                        <MessageSquare className="w-4 h-4 mr-1" />
+                        Отклики ({order.responses_count})
+                      </Button>
+                    )}
+                    {editable && (
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => openCancelDialog(order)}
+                      >
+                        <X className="w-4 h-4 mr-1" />
+                        Отменить
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          );
-        })}
-      </CardContent>
-    </Card>
+            );
+          })}
+        </CardContent>
+      </Card>
+
+      {/* Cancel Confirmation Dialog */}
+      <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Отменить заявку?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Вы уверены, что хотите отменить эту заявку? Это действие нельзя отменить.
+              Все отклики перевозчиков будут отклонены.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Не отменять</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleCancelOrder}
+              disabled={cancelling}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {cancelling ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : null}
+              Да, отменить
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 };

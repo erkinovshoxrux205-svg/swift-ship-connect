@@ -5,6 +5,7 @@ import { MyDealsList } from "@/components/deals/MyDealsList";
 import { FavoriteCarriersList } from "@/components/favorites/FavoriteCarriersList";
 import { DeliveryCostCalculator } from "@/components/calculator/DeliveryCostCalculator";
 import { LoyaltyCard } from "@/components/loyalty/LoyaltyCard";
+import { ReferralCard } from "@/components/referral/ReferralCard";
 
 export const ClientDashboard = () => {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -19,6 +20,7 @@ export const ClientDashboard = () => {
         <CreateOrderForm onSuccess={handleOrderCreated} />
         <div className="space-y-6">
           <LoyaltyCard />
+          <ReferralCard />
           <DeliveryCostCalculator />
         </div>
       </div>

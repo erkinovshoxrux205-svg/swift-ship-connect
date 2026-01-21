@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,9 +7,10 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { User, Truck, ArrowLeft, Loader2 } from "lucide-react";
+import { User, Truck, ArrowLeft, Loader2, Gift } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
+import { supabase } from "@/integrations/supabase/client";
 
 const emailSchema = z.string().email("Неверный формат email");
 const passwordSchema = z.string().min(6, "Минимум 6 символов");
@@ -19,6 +20,7 @@ type Role = "client" | "carrier";
 
 const Auth = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user, signIn, signUp, loading: authLoading } = useAuth();
   const { toast } = useToast();
 
@@ -33,6 +35,17 @@ const Auth = () => {
   const [signupName, setSignupName] = useState("");
   const [signupRole, setSignupRole] = useState<Role>("client");
   const [signupLoading, setSignupLoading] = useState(false);
+  const [referralCode, setReferralCode] = useState("");
+  const [referralValid, setReferralValid] = useState<boolean | null>(null);
+
+  // Check for referral code in URL
+  useEffect(() => {
+    const refCode = searchParams.get("ref");
+    if (refCode) {
+      setReferralCode(refCode.toUpperCase());
+      validateReferralCode(refCode.toUpperCase());
+    }
+  }, [searchParams]);
 
   // Redirect if already logged in
   useEffect(() => {
@@ -40,6 +53,21 @@ const Auth = () => {
       navigate("/dashboard");
     }
   }, [user, authLoading, navigate]);
+
+  const validateReferralCode = async (code: string) => {
+    if (!code.trim()) {
+      setReferralValid(null);
+      return;
+    }
+
+    const { data } = await supabase
+      .from("profiles")
+      .select("user_id")
+      .eq("referral_code", code.toUpperCase())
+      .single();
+
+    setReferralValid(!!data);
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -105,7 +133,7 @@ const Auth = () => {
 
     setSignupLoading(true);
 
-    const { error } = await signUp(signupEmail, signupPassword, signupRole, signupName);
+    const { error, data } = await signUp(signupEmail, signupPassword, signupRole, signupName);
 
     if (error) {
       let message = "Произошла ошибка при регистрации";
@@ -117,13 +145,32 @@ const Auth = () => {
         description: message,
         variant: "destructive",
       });
-    } else {
-      toast({
-        title: "Регистрация успешна!",
-        description: "Добро пожаловать в LogiFlow",
-      });
-      navigate("/dashboard");
+      setSignupLoading(false);
+      return;
     }
+
+    // Handle referral if code was provided
+    if (referralCode && referralValid && data?.user) {
+      const { data: referrerProfile } = await supabase
+        .from("profiles")
+        .select("user_id")
+        .eq("referral_code", referralCode.toUpperCase())
+        .single();
+
+      if (referrerProfile) {
+        await supabase.from("referrals").insert({
+          referrer_id: referrerProfile.user_id,
+          referred_id: data.user.id,
+          referral_code: referralCode.toUpperCase(),
+        });
+      }
+    }
+
+    toast({
+      title: "Регистрация успешна!",
+      description: "Добро пожаловать в LogiFlow",
+    });
+    navigate("/dashboard");
 
     setSignupLoading(false);
   };
@@ -302,6 +349,32 @@ const Auth = () => {
                         </span>
                       </Label>
                     </RadioGroup>
+                  </div>
+
+                  {/* Referral Code */}
+                  <div className="space-y-2">
+                    <Label htmlFor="referral-code" className="flex items-center gap-2">
+                      <Gift className="w-4 h-4" />
+                      Реферальный код (необязательно)
+                    </Label>
+                    <Input
+                      id="referral-code"
+                      type="text"
+                      placeholder="Введите код друга"
+                      value={referralCode}
+                      onChange={(e) => {
+                        const code = e.target.value.toUpperCase();
+                        setReferralCode(code);
+                        validateReferralCode(code);
+                      }}
+                      className={referralValid === true ? "border-green-500" : referralValid === false ? "border-red-500" : ""}
+                    />
+                    {referralValid === true && (
+                      <p className="text-xs text-green-600">✓ Код действителен</p>
+                    )}
+                    {referralValid === false && referralCode && (
+                      <p className="text-xs text-red-600">✗ Код не найден</p>
+                    )}
                   </div>
 
                   <Button
