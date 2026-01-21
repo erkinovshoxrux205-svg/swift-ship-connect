@@ -10,8 +10,8 @@ import { ClientDashboard } from "@/components/client/ClientDashboard";
 import { CarrierDashboard } from "@/components/carrier/CarrierDashboard";
 import { NotificationToggle } from "@/components/notifications/NotificationToggle";
 import { NotificationCenter } from "@/components/notifications/NotificationCenter";
+import { AIChatBot } from "@/components/ai/AIChatBot";
 import { supabase } from "@/integrations/supabase/client";
-
 const Dashboard = () => {
   const navigate = useNavigate();
   const { user, role, loading, signOut } = useAuth();
@@ -303,6 +303,9 @@ const Dashboard = () => {
           </Card>
         )}
       </main>
+
+      {/* AI Chat Bot */}
+      <AIChatBot />
     </div>
   );
 };
