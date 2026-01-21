@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { ArrowLeft, Package, MapPin, MessageSquare, Loader2 } from "lucide-react";
@@ -123,9 +123,12 @@ const OrderChat = () => {
                   <MessageSquare className="w-4 h-4" />
                   Чат по заявке
                 </h1>
-                <p className="text-sm text-muted-foreground">
+                <Link 
+                  to={`/profile/${role === 'client' ? carrierId : order.client_id}`}
+                  className="text-sm text-muted-foreground hover:text-primary underline-offset-2 hover:underline transition-colors"
+                >
                   {otherParticipantName}
-                </p>
+                </Link>
               </div>
             </div>
             <Badge variant="outline">Обсуждение</Badge>
