@@ -11,6 +11,7 @@ import OrderResponses from "./pages/OrderResponses";
 import OrderChat from "./pages/OrderChat";
 import DealChat from "./pages/DealChat";
 import AdminDashboard from "./pages/AdminDashboard";
+import UserProfile from "./pages/UserProfile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,6 +31,8 @@ const App = () => (
             <Route path="/orders/:orderId/chat/:carrierId" element={<OrderChat />} />
             <Route path="/deals/:dealId/chat" element={<DealChat />} />
             <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/profile" element={<UserProfile />} />
+            <Route path="/profile/:userId" element={<UserProfile />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

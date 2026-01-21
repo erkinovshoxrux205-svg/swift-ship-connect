@@ -180,14 +180,19 @@ const Dashboard = () => {
             </Badge>
           </div>
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate("/profile")}
+              className="flex items-center gap-2"
+            >
               <Avatar className="w-8 h-8">
                 <AvatarFallback className={`gradient-${role === "client" ? "customer" : "driver"} text-white`}>
                   {user.email?.charAt(0).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
-              <span className="text-sm hidden md:block">{user.email}</span>
-            </div>
+              <span className="hidden md:block">{user.email}</span>
+            </Button>
             <Button variant="ghost" size="sm" onClick={handleSignOut}>
               <LogOut className="w-4 h-4 mr-2" />
               Выйти
