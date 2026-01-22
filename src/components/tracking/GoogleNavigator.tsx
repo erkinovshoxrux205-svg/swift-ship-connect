@@ -4,7 +4,7 @@ import "leaflet/dist/leaflet.css";
 import { 
   Loader2, Navigation, MapPin, Route, Clock, 
   ChevronRight, Locate, AlertCircle, Volume2, VolumeX,
-  Car, Layers
+  Car
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useToast } from "@/hooks/use-toast";
 import { useVoiceNavigation } from "@/hooks/useVoiceNavigation";
+import { MapStyleSelector, MapStyle, mapTileUrls } from "@/components/map/MapStyleSelector";
 
 interface RouteStep {
   instruction: string;
@@ -90,6 +91,7 @@ export const GoogleNavigator = ({
   const [showTraffic, setShowTraffic] = useState(true);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [distanceToDestination, setDistanceToDestination] = useState<number | null>(null);
+  const [mapStyle, setMapStyle] = useState<MapStyle>("light");
   
   const mapRef = useRef<L.Map | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -217,7 +219,7 @@ export const GoogleNavigator = ({
     }
   }, []);
 
-  // Toggle traffic layer (visual indicator only - actual traffic data comes from route)
+  // Update map style
   useEffect(() => {
     if (!mapRef.current) return;
 
@@ -230,17 +232,15 @@ export const GoogleNavigator = ({
       }
     });
 
-    // CartoDB Voyager (light) or Dark Matter based on traffic toggle for visual distinction
-    const tileUrl = showTraffic
-      ? "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-      : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
-
-    L.tileLayer(tileUrl, {
+    // Use the selected map style
+    const tileConfig = mapTileUrls[mapStyle];
+    
+    L.tileLayer(tileConfig.url, {
       maxZoom: 19,
-      subdomains: "abcd",
+      subdomains: tileConfig.subdomains || undefined,
     }).addTo(map);
 
-  }, [showTraffic]);
+  }, [mapStyle]);
 
   // Update route on map
   useEffect(() => {
@@ -509,9 +509,10 @@ export const GoogleNavigator = ({
         </div>
 
         {/* Controls */}
-        <div className="flex items-center gap-4 text-xs">
+        <div className="flex items-center gap-3 text-xs flex-wrap">
+          <MapStyleSelector value={mapStyle} onChange={setMapStyle} />
           <div className="flex items-center gap-2">
-            <Layers className="w-3.5 h-3.5 text-muted-foreground" />
+            <Car className="w-3.5 h-3.5 text-muted-foreground" />
             <span>Трафик</span>
             <Switch 
               checked={showTraffic} 

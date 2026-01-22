@@ -1,8 +1,10 @@
-import { useEffect, useRef, useMemo } from "react";
+import { useEffect, useRef, useMemo, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useTheme } from "@/hooks/useTheme";
 import { Navigation, Route, Clock } from "lucide-react";
+import { MapStyleSelector, MapStyle, mapTileUrls } from "@/components/map/MapStyleSelector";
 
 // City coordinates for Central Asia
 const cityCoordinates: Record<string, { lat: number; lon: number; country: string }> = {
@@ -125,6 +127,8 @@ export const OrderRouteMap = ({ pickupCity, deliveryCity, className }: OrderRout
   const mapRef = useRef<L.Map | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const { t } = useLanguage();
+  const { resolvedTheme } = useTheme();
+  const [mapStyle, setMapStyle] = useState<MapStyle>(() => resolvedTheme === "dark" ? "dark" : "light");
 
   const fromCoords = cityCoordinates[pickupCity];
   const toCoords = cityCoordinates[deliveryCity];
@@ -148,9 +152,11 @@ export const OrderRouteMap = ({ pickupCity, deliveryCity, className }: OrderRout
         attributionControl: false,
       }).setView([41.3, 64.5], 5);
 
-      // Use a clean map style
-      L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+      // Use selected map style
+      const tileConfig = mapTileUrls[mapStyle];
+      L.tileLayer(tileConfig.url, {
         maxZoom: 19,
+        subdomains: tileConfig.subdomains || undefined,
       }).addTo(mapRef.current);
     }
 
@@ -296,6 +302,29 @@ export const OrderRouteMap = ({ pickupCity, deliveryCity, className }: OrderRout
     return () => {};
   }, [pickupCity, deliveryCity, fromCoords, toCoords, t]);
 
+  // Update map style
+  useEffect(() => {
+    if (!mapRef.current) return;
+    const map = mapRef.current;
+    
+    map.eachLayer((layer) => {
+      if (layer instanceof L.TileLayer) {
+        map.removeLayer(layer);
+      }
+    });
+
+    const tileConfig = mapTileUrls[mapStyle];
+    L.tileLayer(tileConfig.url, {
+      maxZoom: 19,
+      subdomains: tileConfig.subdomains || undefined,
+    }).addTo(map);
+  }, [mapStyle]);
+
+  // Sync map style with theme
+  useEffect(() => {
+    setMapStyle(resolvedTheme === "dark" ? "dark" : "light");
+  }, [resolvedTheme]);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -348,6 +377,11 @@ export const OrderRouteMap = ({ pickupCity, deliveryCity, className }: OrderRout
             </>
           )}
         </div>
+      </div>
+
+      {/* Map style selector */}
+      <div className="absolute top-4 right-4 z-[1000]">
+        <MapStyleSelector value={mapStyle} onChange={setMapStyle} />
       </div>
 
       {/* Map container */}
