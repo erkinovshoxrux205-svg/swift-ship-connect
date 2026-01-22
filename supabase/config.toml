@@ -32,3 +32,9 @@ verify_jwt = false
 
 [functions.notify-new-order]
 verify_jwt = false
+
+[functions.partner-api]
+verify_jwt = false
+
+[functions.kyc-notification]
+verify_jwt = false

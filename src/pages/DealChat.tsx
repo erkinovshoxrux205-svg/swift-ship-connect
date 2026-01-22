@@ -32,6 +32,7 @@ import { ChatMessages } from "@/components/chat/ChatMessages";
 import { LiveMap } from "@/components/tracking/LiveMap";
 import { GoogleNavigator } from "@/components/tracking/GoogleNavigator";
 import { GpsTracker } from "@/components/tracking/GpsTracker";
+import { ClientTrackingPanel } from "@/components/tracking/ClientTrackingPanel";
 import { RatingForm } from "@/components/ratings/RatingForm";
 import { RatingDisplay } from "@/components/ratings/RatingDisplay";
 import { FavoriteCarrierButton } from "@/components/favorites/FavoriteCarrierButton";
@@ -431,7 +432,7 @@ const DealChat = () => {
             </div>
           )}
 
-          {/* GPS Tracking - Driver sees DriverMapView with navigation */}
+          {/* GPS Tracking - Driver sees GoogleNavigator, Client sees ClientTrackingPanel */}
           {showGpsTracking && (
             isCarrier ? (
               <div className="flex-1 min-h-0">
@@ -444,8 +445,8 @@ const DealChat = () => {
                 />
               </div>
             ) : (
-              <div className="p-4">
-                <LiveMap dealId={dealId!} carrierName={otherParticipantName} />
+              <div className="p-4 overflow-y-auto max-h-[500px] lg:max-h-none">
+                <ClientTrackingPanel dealId={dealId!} />
               </div>
             )
           )}
