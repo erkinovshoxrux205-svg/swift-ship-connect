@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
+import { ThemeSwitcher } from "@/components/ui/ThemeSwitcher";
 
 export const Header = () => {
   const { user } = useAuth();
@@ -39,7 +40,8 @@ export const Header = () => {
           </nav>
 
           {/* Desktop CTA */}
-          <div className="hidden md:flex items-center gap-3">
+          <div className="hidden md:flex items-center gap-2">
+            <ThemeSwitcher />
             <LanguageSwitcher />
             {user ? (
               <Link to="/dashboard">
@@ -89,7 +91,8 @@ export const Header = () => {
               <a href="#trust" className="text-sm font-medium text-muted-foreground hover:text-foreground">
                 {t("landing.trust.title")}
               </a>
-              <div className="pt-4">
+              <div className="flex items-center gap-2 pt-4">
+                <ThemeSwitcher />
                 <LanguageSwitcher />
               </div>
               <div className="flex flex-col gap-2 pt-4">

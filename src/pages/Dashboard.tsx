@@ -13,6 +13,7 @@ import { NotificationToggle } from "@/components/notifications/NotificationToggl
 import { NotificationCenter } from "@/components/notifications/NotificationCenter";
 import { AIChatBot } from "@/components/ai/AIChatBot";
 import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
+import { ThemeSwitcher } from "@/components/ui/ThemeSwitcher";
 import { supabase } from "@/integrations/supabase/client";
 
 const Dashboard = () => {
@@ -180,6 +181,7 @@ const Dashboard = () => {
             </div>
             
             <div className="flex items-center gap-1 sm:gap-2">
+              <ThemeSwitcher />
               <LanguageSwitcher />
               <NotificationCenter />
               <NotificationToggle />
