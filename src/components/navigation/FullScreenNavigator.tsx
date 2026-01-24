@@ -1,16 +1,29 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-// Fix Leaflet default marker icons not displaying
-import iconUrl from "leaflet/dist/images/marker-icon.png";
-import iconRetinaUrl from "leaflet/dist/images/marker-icon-2x.png";
-import iconShadow from "leaflet/dist/images/marker-shadow.png";
-
-import { 
-  Navigation, MapPin, Clock, ChevronRight, Locate, 
-  Volume2, VolumeX, Car, X, ChevronUp, ChevronDown,
-  Phone, MessageSquare, AlertTriangle, Zap, Route as RouteIcon,
-  Play, Pause, RotateCcw, Target, Layers, Navigation2
+import {
+  Navigation,
+  MapPin,
+  Clock,
+  ChevronRight,
+  Locate,
+  Volume2,
+  VolumeX,
+  Car,
+  X,
+  ChevronUp,
+  ChevronDown,
+  Phone,
+  MessageSquare,
+  AlertTriangle,
+  Zap,
+  Route as RouteIcon,
+  Play,
+  Pause,
+  RotateCcw,
+  Target,
+  Layers,
+  Navigation2,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
@@ -23,14 +36,6 @@ import { useVoiceNavigation } from "@/hooks/useVoiceNavigation";
 import { MapStyleSelector, MapStyle, mapTileUrls } from "@/components/map/MapStyleSelector";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
-
-// Fix Leaflet default icon paths
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconUrl,
-  iconRetinaUrl,
-  shadowUrl: iconShadow,
-});
 
 interface RouteStep {
   instruction: string;
@@ -64,18 +69,9 @@ interface FullScreenNavigatorProps {
   pickupAddress: string;
   deliveryAddress: string;
   cargoType?: string;
-  // Standardized to lng (Leaflet convention)
-  pickupCoords?: { lat: number; lon: number } | { lat: number; lng: number };
-  deliveryCoords?: { lat: number; lon: number } | { lat: number; lng: number };
+  pickupCoords?: { lat: number; lon: number };
+  deliveryCoords?: { lat: number; lon: number };
   onClose?: () => void;
-}
-
-// Helper to normalize coordinates (handles both lon and lng)
-function normalizeCoords(coords: { lat: number; lon?: number; lng?: number } | null | undefined): Coords | null {
-  if (!coords) return null;
-  const lng = coords.lng ?? coords.lon;
-  if (lng === undefined) return null;
-  return { lat: coords.lat, lng };
 }
 
 // Maneuver icons mapping
@@ -88,8 +84,8 @@ const maneuverIcons: Record<string, string> = {
   "turn-sharp-right": "➡",
   "uturn-left": "↩",
   "uturn-right": "↪",
-  "straight": "↑",
-  "merge": "⤵",
+  straight: "↑",
+  merge: "⤵",
   "roundabout-left": "↺",
   "roundabout-right": "↻",
   "fork-left": "⤴",
@@ -98,23 +94,22 @@ const maneuverIcons: Record<string, string> = {
   "ramp-right": "↱",
   "keep-left": "↖",
   "keep-right": "↗",
-  "ferry": "⛴",
+  ferry: "⛴",
   "ferry-train": "🚂",
 };
 
 function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371;
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 }
 
-export const FullScreenNavigator = ({ 
+export const FullScreenNavigator = ({
   dealId,
   clientId,
   clientName,
@@ -124,20 +119,20 @@ export const FullScreenNavigator = ({
   cargoType,
   pickupCoords: initialPickupCoords,
   deliveryCoords: initialDeliveryCoords,
-  onClose 
+  onClose,
 }: FullScreenNavigatorProps) => {
   const navigate = useNavigate();
   const { t } = useLanguage();
   const { toast } = useToast();
   const voiceNav = useVoiceNavigation({ enabled: true });
-  
-  // State - initialize from props if coordinates provided (use normalizeCoords helper)
+
+  // State - initialize from props if coordinates provided
   const [currentPosition, setCurrentPosition] = useState<Coords | null>(null);
   const [pickupCoords, setPickupCoords] = useState<Coords | null>(
-    normalizeCoords(initialPickupCoords)
+    initialPickupCoords ? { lat: initialPickupCoords.lat, lng: initialPickupCoords.lon } : null,
   );
   const [deliveryCoords, setDeliveryCoords] = useState<Coords | null>(
-    normalizeCoords(initialDeliveryCoords)
+    initialDeliveryCoords ? { lat: initialDeliveryCoords.lat, lng: initialDeliveryCoords.lon } : null,
   );
   const [routeData, setRouteData] = useState<RouteData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -154,7 +149,7 @@ export const FullScreenNavigator = ({
   const [arrived, setArrived] = useState(false);
   const [traveledDistance, setTraveledDistance] = useState(0);
   const [startTime, setStartTime] = useState<Date | null>(null);
-  
+
   // Refs
   const mapRef = useRef<L.Map | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -165,7 +160,6 @@ export const FullScreenNavigator = ({
   const notifiedDistancesRef = useRef<Set<number>>(new Set());
   const lastSpokenStepRef = useRef<number>(-1);
   const positionHistoryRef = useRef<Coords[]>([]);
-  const trackingActiveRef = useRef<boolean>(false); // Prevent double GPS tracking (StrictMode)
 
   // Geocode address
   const geocodeAddress = useCallback(async (address: string): Promise<Coords | null> => {
@@ -173,12 +167,12 @@ export const FullScreenNavigator = ({
       const { data, error } = await supabase.functions.invoke("geocode", {
         body: { address },
       });
-      
+
       if (error || data.error) {
         console.error("Geocode error:", error || data.error);
         return null;
       }
-      
+
       return { lat: data.lat, lng: data.lng };
     } catch (err) {
       console.error("Failed to geocode:", err);
@@ -187,61 +181,64 @@ export const FullScreenNavigator = ({
   }, []);
 
   // Fetch route
-  const fetchRoute = useCallback(async (origin: Coords) => {
-    if (!deliveryCoords) return;
+  const fetchRoute = useCallback(
+    async (origin: Coords) => {
+      if (!deliveryCoords) return;
 
-    setRouteLoading(true);
-    setError(null);
+      setRouteLoading(true);
+      setError(null);
 
-    try {
-      const { data, error: fnError } = await supabase.functions.invoke("google-directions", {
-        body: {
-          origin: { lat: origin.lat, lng: origin.lng },
-          destination: { lat: deliveryCoords.lat, lng: deliveryCoords.lng },
-        },
-      });
+      try {
+        const { data, error: fnError } = await supabase.functions.invoke("google-directions", {
+          body: {
+            origin: { lat: origin.lat, lng: origin.lng },
+            destination: { lat: deliveryCoords.lat, lng: deliveryCoords.lng },
+          },
+        });
 
-      if (fnError) throw fnError;
+        if (fnError) throw fnError;
 
-      if (data.error) {
-        setError(data.error);
-      } else {
-        setRouteData(data);
-        
-        // Voice announcement on first route
-        if (!routeData && voiceEnabled) {
-          const distance = data.distance?.text || "";
-          const duration = data.duration?.text || "";
-          voiceNav.speak(`Маршрут построен. ${distance}, примерное время ${duration}.`);
+        if (data.error) {
+          setError(data.error);
+        } else {
+          setRouteData(data);
+
+          // Voice announcement on first route
+          if (!routeData && voiceEnabled) {
+            const distance = data.distance?.text || "";
+            const duration = data.duration?.text || "";
+            voiceNav.speak(`Маршрут построен. ${distance}, примерное время ${duration}.`);
+          }
         }
+      } catch (err: unknown) {
+        const errMsg = err instanceof Error ? err.message : "Failed to load route";
+        setError(errMsg);
+        toast({
+          title: "Ошибка маршрута",
+          description: errMsg,
+          variant: "destructive",
+        });
+      } finally {
+        setRouteLoading(false);
       }
-    } catch (err: unknown) {
-      const errMsg = err instanceof Error ? err.message : "Failed to load route";
-      setError(errMsg);
-      toast({
-        title: "Ошибка маршрута",
-        description: errMsg,
-        variant: "destructive",
-      });
-    } finally {
-      setRouteLoading(false);
-    }
-  }, [deliveryCoords, routeData, voiceEnabled, voiceNav, toast]);
+    },
+    [deliveryCoords, routeData, voiceEnabled, voiceNav, toast],
+  );
 
   // Geocode on mount
   useEffect(() => {
     const geocodeAddresses = async () => {
       setLoading(true);
-      
+
       const pickup = await geocodeAddress(pickupAddress);
       if (pickup) setPickupCoords(pickup);
-      
+
       const delivery = await geocodeAddress(deliveryAddress);
       if (delivery) setDeliveryCoords(delivery);
-      
+
       setLoading(false);
     };
-    
+
     geocodeAddresses();
   }, [pickupAddress, deliveryAddress, geocodeAddress]);
 
@@ -263,15 +260,8 @@ export const FullScreenNavigator = ({
     // Add zoom control to bottom right
     L.control.zoom({ position: "bottomright" }).addTo(mapRef.current);
 
-    // Force map to recalculate its size after container is fully rendered
-    setTimeout(() => {
-      mapRef.current?.invalidateSize();
-    }, 100);
-
     return () => {
-      // Safe cleanup - check if Leaflet map is still valid before removing
-      // Prevents crash if remove() called twice (React StrictMode)
-      if (mapRef.current && (mapRef.current as any)._leaflet_id) {
+      if (mapRef.current) {
         mapRef.current.remove();
         mapRef.current = null;
       }
@@ -295,15 +285,6 @@ export const FullScreenNavigator = ({
     }).addTo(mapRef.current);
   }, [mapStyle]);
 
-  // Recalculate map size when panel expands/collapses
-  useEffect(() => {
-    if (!mapRef.current) return;
-    const id = window.setTimeout(() => {
-      mapRef.current?.invalidateSize();
-    }, 350);
-    return () => window.clearTimeout(id);
-  }, [panelExpanded]);
-
   // Draw route on map
   useEffect(() => {
     if (!mapRef.current) return;
@@ -317,7 +298,7 @@ export const FullScreenNavigator = ({
 
     // Draw route if available
     if (routeData?.points && routeData.points.length > 0) {
-      const routePoints = routeData.points.map(p => [p.lat, p.lng] as L.LatLngExpression);
+      const routePoints = routeData.points.map((p) => [p.lat, p.lng] as L.LatLngExpression);
 
       // Route shadow
       L.polyline(routePoints, {
@@ -378,56 +359,53 @@ export const FullScreenNavigator = ({
   }, [routeData, pickupCoords, deliveryCoords, pickupAddress, deliveryAddress, currentPosition]);
 
   // Send proximity notification
-  const sendProximityNotification = useCallback(async (distanceKm: number) => {
-    const thresholds = [5, 1, 0.5, 0.1];
-    
-    for (const threshold of thresholds) {
-      if (distanceKm <= threshold && !notifiedDistancesRef.current.has(threshold)) {
-        notifiedDistancesRef.current.add(threshold);
-        
-        if (voiceEnabled) {
-          voiceNav.speakProximityAlert(distanceKm);
-        }
+  const sendProximityNotification = useCallback(
+    async (distanceKm: number) => {
+      const thresholds = [5, 1, 0.5, 0.1];
 
-        // Check if arrived (50 meters threshold - more reliable than 100m)
-        if (distanceKm <= 0.05) {
-          setArrived(true);
+      for (const threshold of thresholds) {
+        if (distanceKm <= threshold && !notifiedDistancesRef.current.has(threshold)) {
+          notifiedDistancesRef.current.add(threshold);
+
           if (voiceEnabled) {
-            voiceNav.speak("Вы прибыли к месту назначения!");
+            voiceNav.speakProximityAlert(distanceKm);
           }
-          toast({
-            title: "🎉 Прибытие",
-            description: "Вы достигли точки доставки",
-          });
+
+          // Check if arrived
+          if (distanceKm <= 0.1) {
+            setArrived(true);
+            if (voiceEnabled) {
+              voiceNav.speak("Вы прибыли к месту назначения!");
+            }
+            toast({
+              title: "🎉 Прибытие",
+              description: "Вы достигли точки доставки",
+            });
+          }
+
+          // Push notification to client
+          try {
+            await supabase.functions.invoke("proximity-notification", {
+              body: {
+                dealId,
+                clientId,
+                distanceKm: threshold,
+                carrierName: "Водитель",
+              },
+            });
+          } catch (err) {
+            console.error("Failed to send proximity notification:", err);
+          }
+
+          break;
         }
-        
-        // Push notification to client
-        try {
-          await supabase.functions.invoke("proximity-notification", {
-            body: {
-              dealId,
-              clientId,
-              distanceKm: threshold,
-              carrierName: "Водитель",
-            },
-          });
-        } catch (err) {
-          console.error("Failed to send proximity notification:", err);
-        }
-        
-        break;
       }
-    }
-  }, [dealId, clientId, voiceEnabled, voiceNav, toast]);
+    },
+    [dealId, clientId, voiceEnabled, voiceNav, toast],
+  );
 
   // Start GPS tracking
   const startTracking = useCallback(() => {
-    // Prevent double tracking (React StrictMode calls effects twice)
-    if (trackingActiveRef.current) {
-      console.log("GPS tracking already active, skipping");
-      return;
-    }
-
     if (!navigator.geolocation) {
       toast({
         title: "Ошибка",
@@ -437,7 +415,6 @@ export const FullScreenNavigator = ({
       return;
     }
 
-    trackingActiveRef.current = true;
     setStartTime(new Date());
     notifiedDistancesRef.current.clear();
     lastSpokenStepRef.current = -1;
@@ -448,16 +425,13 @@ export const FullScreenNavigator = ({
           lat: position.coords.latitude,
           lng: position.coords.longitude,
         };
-        
+
         // Calculate traveled distance
         if (currentPosition) {
-          const dist = calculateDistance(
-            currentPosition.lat, currentPosition.lng,
-            pos.lat, pos.lng
-          );
-          setTraveledDistance(prev => prev + dist);
+          const dist = calculateDistance(currentPosition.lat, currentPosition.lng, pos.lat, pos.lng);
+          setTraveledDistance((prev) => prev + dist);
         }
-        
+
         setCurrentPosition(pos);
         positionHistoryRef.current.push(pos);
 
@@ -499,26 +473,24 @@ export const FullScreenNavigator = ({
             }).addTo(mapRef.current);
           }
 
-          // Follow driver - use panTo for smoother animation (less laggy than setView)
+          // Follow driver
           if (followDriver) {
-            mapRef.current.panTo([pos.lat, pos.lng], { animate: true, duration: 0.5 });
+            mapRef.current.setView([pos.lat, pos.lng], 17, { animate: true });
           }
         }
 
-        // Update traveled path - use setLatLngs to avoid memory leak
+        // Update traveled path
         if (mapRef.current && positionHistoryRef.current.length > 1) {
-          const traveledPoints = positionHistoryRef.current.map(p => [p.lat, p.lng] as L.LatLngExpression);
           if (traveledLineRef.current) {
-            // Reuse existing polyline - no remove/add = no memory leak
-            traveledLineRef.current.setLatLngs(traveledPoints);
-          } else {
-            traveledLineRef.current = L.polyline(traveledPoints, {
-              color: "#10b981",
-              weight: 5,
-              opacity: 0.7,
-              dashArray: "5, 10",
-            }).addTo(mapRef.current);
+            mapRef.current.removeLayer(traveledLineRef.current);
           }
+          const traveledPoints = positionHistoryRef.current.map((p) => [p.lat, p.lng] as L.LatLngExpression);
+          traveledLineRef.current = L.polyline(traveledPoints, {
+            color: "#10b981",
+            weight: 5,
+            opacity: 0.7,
+            dashArray: "5, 10",
+          }).addTo(mapRef.current);
         }
 
         // Calculate distance to destination
@@ -528,14 +500,9 @@ export const FullScreenNavigator = ({
           sendProximityNotification(dist);
         }
 
-        // Fetch route if not loaded (use functional check to avoid stale closure)
-        if (deliveryCoords) {
-          setRouteData(prev => {
-            if (!prev) {
-              fetchRoute(pos);
-            }
-            return prev;
-          });
+        // Fetch route if not loaded
+        if (!routeData && deliveryCoords) {
+          fetchRoute(pos);
         }
       },
       (err) => {
@@ -550,7 +517,7 @@ export const FullScreenNavigator = ({
         enableHighAccuracy: true,
         timeout: 15000,
         maximumAge: 2000,
-      }
+      },
     );
 
     watchIdRef.current = watchId;
@@ -564,7 +531,18 @@ export const FullScreenNavigator = ({
       title: "🛰️ GPS включён",
       description: "Отслеживание маршрута активно",
     });
-  }, [dealId, deliveryCoords, currentPosition, followDriver, voiceEnabled, voiceNav, sendProximityNotification, fetchRoute, toast]);
+  }, [
+    dealId,
+    deliveryCoords,
+    currentPosition,
+    followDriver,
+    routeData,
+    voiceEnabled,
+    voiceNav,
+    sendProximityNotification,
+    fetchRoute,
+    toast,
+  ]);
 
   // Stop tracking
   const stopTracking = useCallback(() => {
@@ -572,7 +550,6 @@ export const FullScreenNavigator = ({
       navigator.geolocation.clearWatch(watchIdRef.current);
       watchIdRef.current = null;
     }
-    trackingActiveRef.current = false; // Reset guard
     setTracking(false);
     voiceNav.stop();
   }, [voiceNav]);
@@ -589,7 +566,7 @@ export const FullScreenNavigator = ({
         currentPosition.lat,
         currentPosition.lng,
         step.startLocation.lat,
-        step.startLocation.lng
+        step.startLocation.lng,
       );
       if (dist < minDistance) {
         minDistance = dist;
@@ -599,7 +576,7 @@ export const FullScreenNavigator = ({
 
     if (closestStepIndex !== currentStepIndex) {
       setCurrentStepIndex(closestStepIndex);
-      
+
       // Speak new instruction
       if (voiceEnabled && closestStepIndex > lastSpokenStepRef.current && tracking) {
         const step = routeData.steps[closestStepIndex];
@@ -609,11 +586,10 @@ export const FullScreenNavigator = ({
     }
   }, [currentPosition, routeData, currentStepIndex, voiceEnabled, voiceNav, tracking]);
 
-  // Center on driver - use panTo for smoother FPS
+  // Center on driver
   const centerOnDriver = () => {
     if (mapRef.current && currentPosition) {
-      mapRef.current.panTo([currentPosition.lat, currentPosition.lng], { animate: true });
-      mapRef.current.setZoom(17);
+      mapRef.current.setView([currentPosition.lat, currentPosition.lng], 17, { animate: true });
       setFollowDriver(true);
     }
   };
@@ -659,23 +635,21 @@ export const FullScreenNavigator = ({
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col">
       {/* Map */}
-      <div className="flex-1 relative min-h-[300px]">
-        <div ref={mapContainerRef} className="absolute inset-0" />
-      </div>
+      <div ref={mapContainerRef} className="h-full w-full" />
 
       {/* Top Controls */}
       <div className="absolute top-4 left-4 right-4 flex items-start justify-between pointer-events-none">
         {/* Left: Close & Info */}
         <div className="flex flex-col gap-2 pointer-events-auto">
-          <Button 
-            variant="secondary" 
-            size="icon" 
+          <Button
+            variant="secondary"
+            size="icon"
             className="h-12 w-12 rounded-full shadow-lg bg-background/90 backdrop-blur"
             onClick={handleClose}
           >
             <X className="h-5 w-5" />
           </Button>
-          
+
           {cargoType && (
             <Badge className="px-3 py-1.5 bg-background/90 backdrop-blur shadow-lg text-foreground">
               📦 {cargoType}
@@ -685,20 +659,16 @@ export const FullScreenNavigator = ({
 
         {/* Right: Controls */}
         <div className="flex flex-col gap-2 pointer-events-auto">
-          <Button 
+          <Button
             variant={voiceEnabled ? "default" : "secondary"}
-            size="icon" 
+            size="icon"
             className="h-12 w-12 rounded-full shadow-lg"
             onClick={() => setVoiceEnabled(!voiceEnabled)}
           >
             {voiceEnabled ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
           </Button>
-          
-          <MapStyleSelector 
-            value={mapStyle} 
-            onChange={setMapStyle}
-            className="shadow-lg"
-          />
+
+          <MapStyleSelector value={mapStyle} onChange={setMapStyle} className="shadow-lg" />
         </div>
       </div>
 
@@ -717,17 +687,14 @@ export const FullScreenNavigator = ({
       )}
 
       {/* Bottom Panel */}
-      <div 
+      <div
         className={cn(
           "absolute bottom-0 left-0 right-0 bg-background/95 backdrop-blur-xl border-t shadow-2xl transition-all duration-300",
-          panelExpanded ? "max-h-[60vh]" : "max-h-[140px]"
+          panelExpanded ? "max-h-[60vh]" : "max-h-[140px]",
         )}
       >
         {/* Panel Toggle */}
-        <button 
-          className="w-full py-2 flex justify-center"
-          onClick={() => setPanelExpanded(!panelExpanded)}
-        >
+        <button className="w-full py-2 flex justify-center" onClick={() => setPanelExpanded(!panelExpanded)}>
           <div className="w-12 h-1 rounded-full bg-muted-foreground/30" />
         </button>
 
@@ -740,9 +707,7 @@ export const FullScreenNavigator = ({
                   {maneuverIcons[currentStep.maneuver || "straight"] || "↑"}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-lg font-semibold leading-tight">
-                    {currentStep.instruction}
-                  </p>
+                  <p className="text-lg font-semibold leading-tight">{currentStep.instruction}</p>
                   <div className="flex items-center gap-3 mt-2 text-sm text-muted-foreground">
                     <span className="font-medium text-primary">{currentStep.distance.text}</span>
                     <span>•</span>
@@ -765,9 +730,7 @@ export const FullScreenNavigator = ({
           {nextStep && panelExpanded && (
             <div className="flex items-center gap-3 px-2 py-2 rounded-xl bg-muted/50">
               <ChevronRight className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">
-                Затем: {nextStep.instruction}
-              </span>
+              <span className="text-sm text-muted-foreground">Затем: {nextStep.instruction}</span>
             </div>
           )}
 
@@ -820,13 +783,8 @@ export const FullScreenNavigator = ({
                 </>
               )}
             </Button>
-            
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-14 w-14"
-              onClick={resetNavigation}
-            >
+
+            <Button variant="outline" size="icon" className="h-14 w-14" onClick={resetNavigation}>
               <RotateCcw className="h-5 w-5" />
             </Button>
           </div>
@@ -834,14 +792,10 @@ export const FullScreenNavigator = ({
           {/* Client Contact */}
           {panelExpanded && (clientName || clientPhone) && (
             <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/50">
-              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                👤
-              </div>
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">👤</div>
               <div className="flex-1 min-w-0">
                 <p className="font-medium truncate">{clientName || "Клиент"}</p>
-                {clientPhone && (
-                  <p className="text-sm text-muted-foreground">{clientPhone}</p>
-                )}
+                {clientPhone && <p className="text-sm text-muted-foreground">{clientPhone}</p>}
               </div>
               {clientPhone && (
                 <Button variant="outline" size="icon" asChild>
@@ -859,9 +813,7 @@ export const FullScreenNavigator = ({
           {/* Arrival Banner */}
           {arrived && (
             <div className="bg-green-500/20 border border-green-500/30 rounded-xl p-4 text-center">
-              <p className="text-lg font-bold text-green-600 dark:text-green-400">
-                🎉 Вы прибыли!
-              </p>
+              <p className="text-lg font-bold text-green-600 dark:text-green-400">🎉 Вы прибыли!</p>
               <p className="text-sm text-muted-foreground mt-1">
                 Проехано {traveledDistance.toFixed(1)} км за {elapsedTime} минут
               </p>
@@ -875,9 +827,7 @@ export const FullScreenNavigator = ({
         <div className="absolute inset-0 bg-background/80 backdrop-blur flex items-center justify-center">
           <div className="text-center space-y-4">
             <div className="w-16 h-16 rounded-full border-4 border-primary border-t-transparent animate-spin mx-auto" />
-            <p className="text-lg font-medium">
-              {loading ? "Загрузка карты..." : "Построение маршрута..."}
-            </p>
+            <p className="text-lg font-medium">{loading ? "Загрузка карты..." : "Построение маршрута..."}</p>
           </div>
         </div>
       )}
