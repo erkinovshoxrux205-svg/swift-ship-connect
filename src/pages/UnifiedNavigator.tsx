@@ -185,8 +185,6 @@ const UnifiedNavigator = () => {
 
   // Initialize map
   useEffect(() => {
-    if (!mapContainerRef.current) return;
-    
     // Cleanup existing map first
     if (mapRef.current) {
       mapRef.current.remove();
@@ -195,45 +193,63 @@ const UnifiedNavigator = () => {
 
     // Small delay to ensure container is properly sized
     const initTimer = setTimeout(() => {
-      if (!mapContainerRef.current) return;
-
-      const map = L.map(mapContainerRef.current, {
-        zoomControl: false,
-        attributionControl: false,
-      }).setView([41.3, 69.3], 12);
-
-      mapRef.current = map;
-
-      const tileConfig = mapTileUrls[mapStyle];
-      L.tileLayer(tileConfig.url, {
-        maxZoom: 19,
-        subdomains: tileConfig.subdomains || undefined,
-      }).addTo(map);
-
-      L.control.zoom({ position: "bottomright" }).addTo(map);
-
-      // Force invalidate size after render
-      setTimeout(() => {
-        map.invalidateSize();
-      }, 100);
-
-      // Get current location
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          (pos) => {
-            const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-            setCurrentPosition(coords);
-            map.setView([coords.lat, coords.lng], 14);
-            
-            // Invalidate size again after location change
-            setTimeout(() => map.invalidateSize(), 50);
-          },
-          (err) => {
-            console.log("Geolocation not available:", err.message);
-          }
-        );
+      if (!mapContainerRef.current) {
+        console.error("Map container not ready");
+        return;
       }
-    }, 50);
+
+      console.log("Initializing Leaflet map with style:", mapStyle);
+
+      try {
+        const map = L.map(mapContainerRef.current, {
+          zoomControl: false,
+          attributionControl: false,
+        }).setView([41.3, 69.3], 6);
+
+        mapRef.current = map;
+
+        const tileConfig = mapTileUrls[mapStyle];
+        console.log("Loading tiles from:", tileConfig.url);
+        
+        L.tileLayer(tileConfig.url, {
+          maxZoom: 19,
+          subdomains: tileConfig.subdomains || undefined,
+        }).addTo(map);
+
+        L.control.zoom({ position: "bottomright" }).addTo(map);
+
+        // Force multiple invalidateSize calls to ensure tiles render
+        [100, 300, 500, 1000].forEach(delay => {
+          setTimeout(() => {
+            if (mapRef.current) {
+              mapRef.current.invalidateSize();
+            }
+          }, delay);
+        });
+
+        // Get current location
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+              setCurrentPosition(coords);
+              if (mapRef.current) {
+                mapRef.current.setView([coords.lat, coords.lng], 14);
+                setTimeout(() => mapRef.current?.invalidateSize(), 50);
+              }
+            },
+            (err) => {
+              console.log("Geolocation not available:", err.message);
+            },
+            { enableHighAccuracy: true }
+          );
+        }
+        
+        console.log("Leaflet map initialized successfully");
+      } catch (err) {
+        console.error("Failed to initialize map:", err);
+      }
+    }, 100);
 
     return () => {
       clearTimeout(initTimer);
@@ -739,12 +755,16 @@ const UnifiedNavigator = () => {
         </div>
       </header>
 
-      {/* Map - Full screen */}
-      <div className="flex-1 relative overflow-hidden">
+      {/* Map - Full screen with explicit sizing */}
+      <div className="flex-1 relative overflow-hidden" style={{ minHeight: '300px' }}>
         <div 
           ref={mapContainerRef} 
-          className="absolute inset-0 z-0"
-          style={{ minHeight: '200px' }}
+          className="absolute inset-0 z-0 bg-muted"
+          style={{ 
+            minHeight: '300px',
+            width: '100%',
+            height: '100%'
+          }}
         />
 
         {/* Speed Camera Overlay */}
