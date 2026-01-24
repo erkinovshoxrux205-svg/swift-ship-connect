@@ -2,10 +2,14 @@ import { useCallback, useRef, useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
+export type VoiceGender = "male" | "female";
+
 interface VoiceNavigationOptions {
   enabled?: boolean;
   language?: string;
   premium?: boolean;
+  gender?: VoiceGender;
+  rate?: number; // 0.5 - 2.0
 }
 
 // Constants for rate limiting
@@ -13,10 +17,18 @@ const MAX_QUEUE_SIZE = 3;
 const PHRASE_COOLDOWN_MS = 15000; // 15 seconds between identical phrases
 
 export const useVoiceNavigation = (options: VoiceNavigationOptions = {}) => {
-  const { enabled = true, language = "ru", premium = false } = options;
+  const { 
+    enabled = true, 
+    language = "ru", 
+    premium = false,
+    gender = "male",
+    rate = 1.0,
+  } = options;
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isPremium, setIsPremium] = useState(premium);
+  const [voiceGender, setVoiceGender] = useState<VoiceGender>(gender);
+  const [speechRate, setSpeechRate] = useState(rate);
   const { toast } = useToast();
   
   const queueRef = useRef<string[]>([]);
@@ -56,30 +68,58 @@ export const useVoiceNavigation = (options: VoiceNavigationOptions = {}) => {
     };
   }, [isPremium]);
 
-  // Get best voice for language
+  // Get best voice for language and gender
   const getBestVoice = useCallback((lang: string): SpeechSynthesisVoice | null => {
     if (!synthRef.current) return null;
     
     const voices = synthRef.current.getVoices();
     const langCode = lang === "ru" ? "ru" : "en";
     
-    // Prefer Google voices, then Microsoft, then any
-    let voice = voices.find(v => 
-      v.lang.startsWith(langCode) && 
-      (v.name.includes("Google") || v.name.includes("Microsoft"))
-    );
+    // Filter voices by language
+    const langVoices = voices.filter(v => v.lang.startsWith(langCode));
+    
+    if (langVoices.length === 0) {
+      return voices[0] || null;
+    }
+    
+    // Try to find a voice matching the gender preference
+    // Common naming patterns for voice gender
+    const malePatterns = ["male", "david", "daniel", "dmitry", "pavel", "maxim", "ivan"];
+    const femalePatterns = ["female", "zira", "elena", "anna", "maria", "irina", "svetlana", "natasha"];
+    
+    const genderPatterns = voiceGender === "male" ? malePatterns : femalePatterns;
+    
+    // First try Google/Microsoft voices with matching gender
+    let voice = langVoices.find(v => {
+      const nameLower = v.name.toLowerCase();
+      const hasProvider = nameLower.includes("google") || nameLower.includes("microsoft");
+      const matchesGender = genderPatterns.some(p => nameLower.includes(p));
+      return hasProvider && matchesGender;
+    });
+    
+    // Then try any voice with matching gender
     if (!voice) {
-      voice = voices.find(v => v.lang.startsWith(langCode) && v.localService);
+      voice = langVoices.find(v => {
+        const nameLower = v.name.toLowerCase();
+        return genderPatterns.some(p => nameLower.includes(p));
+      });
+    }
+    
+    // Fallback: prefer Google/Microsoft, then local, then any
+    if (!voice) {
+      voice = langVoices.find(v => 
+        v.name.includes("Google") || v.name.includes("Microsoft")
+      );
     }
     if (!voice) {
-      voice = voices.find(v => v.lang.startsWith(langCode));
+      voice = langVoices.find(v => v.localService);
     }
-    if (!voice && voices.length > 0) {
-      voice = voices[0];
+    if (!voice) {
+      voice = langVoices[0];
     }
     
     return voice || null;
-  }, []);
+  }, [voiceGender]);
 
   // Check if phrase was recently spoken (deduplication)
   const isDuplicatePhrase = useCallback((text: string): boolean => {
@@ -165,8 +205,8 @@ export const useVoiceNavigation = (options: VoiceNavigationOptions = {}) => {
       }
       
       utterance.lang = language === "ru" ? "ru-RU" : "en-US";
-      utterance.rate = 1.1; // Slightly faster for navigation
-      utterance.pitch = 1;
+      utterance.rate = speechRate; // Use configurable rate
+      utterance.pitch = voiceGender === "female" ? 1.1 : 0.9; // Adjust pitch based on gender
       utterance.volume = 1;
 
       utterance.onstart = () => {
@@ -185,7 +225,7 @@ export const useVoiceNavigation = (options: VoiceNavigationOptions = {}) => {
 
       synthRef.current.speak(utterance);
     });
-  }, [language, getBestVoice]);
+  }, [language, getBestVoice, speechRate, voiceGender]);
 
   const speak = useCallback(async (text: string) => {
     if (!enabled || !text) return;
@@ -285,6 +325,11 @@ export const useVoiceNavigation = (options: VoiceNavigationOptions = {}) => {
     setIsPremium(enabled);
   }, []);
 
+  const updateVoiceSettings = useCallback((newGender: VoiceGender, newRate: number) => {
+    setVoiceGender(newGender);
+    setSpeechRate(newRate);
+  }, []);
+
   return {
     speak,
     speakInstruction,
@@ -295,5 +340,8 @@ export const useVoiceNavigation = (options: VoiceNavigationOptions = {}) => {
     isPremium,
     setPremiumVoice,
     isTemporarilyDisabled: false,
+    voiceGender,
+    speechRate,
+    updateVoiceSettings,
   };
 };
