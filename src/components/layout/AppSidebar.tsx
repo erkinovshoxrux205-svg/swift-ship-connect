@@ -46,6 +46,7 @@ const carrierNavItems: NavItem[] = [
   { title: "deals.myDeals", icon: FileText, href: "/dashboard#deals" },
   { title: "carrier.navigation", icon: Navigation, href: "/dashboard#navigation" },
   { title: "carrier.achievements", icon: Star, href: "/dashboard#achievements" },
+  { title: "carrier.preferences", icon: Settings, href: "/dashboard#settings" },
 ];
 
 const adminNavItems: NavItem[] = [

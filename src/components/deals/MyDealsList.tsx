@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { format } from "date-fns";
-import { ru } from "date-fns/locale";
+import { ru, enUS } from "date-fns/locale";
 import { 
   Package, MapPin, MessageSquare, Loader2, 
   Truck, CheckCircle, Navigation, Flag, Star
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -39,17 +40,10 @@ interface Deal {
   };
 }
 
-const statusConfig = {
-  pending: { label: "Kutilmoqda", icon: Truck, color: "bg-muted text-muted-foreground" },
-  accepted: { label: "Qabul qilindi", icon: CheckCircle, color: "bg-customer text-white" },
-  in_transit: { label: "Yo'lda", icon: Navigation, color: "bg-driver text-white" },
-  delivered: { label: "Yetkazildi", icon: Flag, color: "bg-gold text-white" },
-  cancelled: { label: "Bekor qilindi", icon: Truck, color: "bg-destructive text-white" },
-};
-
 export const MyDealsList = () => {
   const { user, role } = useAuth();
   const navigate = useNavigate();
+  const { t, language } = useLanguage();
   const [deals, setDeals] = useState<Deal[]>([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
@@ -58,6 +52,16 @@ export const MyDealsList = () => {
     totalEarnings: 0,
     averageRating: null as number | null,
   });
+
+  const dateLocale = language === "ru" ? ru : language === "uz" ? ru : enUS;
+
+  const statusConfig = {
+    pending: { label: t("deals.status.pending"), icon: Truck, color: "bg-muted text-muted-foreground" },
+    accepted: { label: t("deals.status.accepted"), icon: CheckCircle, color: "bg-customer text-white" },
+    in_transit: { label: t("deals.status.in_transit"), icon: Navigation, color: "bg-driver text-white" },
+    delivered: { label: t("deals.status.delivered"), icon: Flag, color: "bg-gold text-white" },
+    cancelled: { label: t("deals.status.cancelled"), icon: Truck, color: "bg-destructive text-white" },
+  };
 
   useEffect(() => {
     const fetchDeals = async () => {
@@ -171,11 +175,11 @@ export const MyDealsList = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Truck className="w-5 h-5" />
-            Mening bitimlarim
+            {t("deals.myDeals")}
           </CardTitle>
         </CardHeader>
         <CardContent className="py-8 text-center text-muted-foreground">
-          Sizda hali faol bitimlar yo'q
+          {t("dashboard.noDeals")}
         </CardContent>
       </Card>
     );
@@ -188,10 +192,10 @@ export const MyDealsList = () => {
           <div>
             <CardTitle className="flex items-center gap-2">
               <Truck className="w-5 h-5" />
-              Mening bitimlarim
+              {t("deals.myDeals")}
             </CardTitle>
             <CardDescription>
-              {deals.length} ta bitim
+              {deals.length} {t("deals.count") || (language === "ru" ? "сделок" : language === "uz" ? "ta bitim" : "deals")}
             </CardDescription>
           </div>
           <div className="flex gap-2">
@@ -230,21 +234,21 @@ export const MyDealsList = () => {
 
                   <div className="flex items-center gap-4 text-sm">
                     <span className="font-semibold text-driver">
-                      {deal.agreed_price.toLocaleString()} so'm
+                      {deal.agreed_price.toLocaleString()} {t("common.currency")}
                     </span>
                     <Link 
                       to={`/profile/${role === "client" ? deal.carrier_id : deal.client_id}`}
                       className="text-muted-foreground hover:text-primary underline-offset-2 hover:underline transition-colors"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      {role === "client" ? "Haydovchi" : "Mijoz"}: {deal.other_profile?.full_name || "—"}
+                      {role === "client" ? t("deals.driver") : t("deals.client")}: {deal.other_profile?.full_name || "—"}
                     </Link>
                   </div>
                 </div>
 
                 <Button variant="outline" size="sm">
                   <MessageSquare className="w-4 h-4 mr-1" />
-                  Chat
+                  {t("deals.chat")}
                 </Button>
               </div>
             </div>
