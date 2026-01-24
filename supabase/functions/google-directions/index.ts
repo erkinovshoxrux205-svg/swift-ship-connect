@@ -90,44 +90,47 @@ function decodePolyline(encoded: string): { lat: number; lng: number }[] {
   return points;
 }
 
-function parseRoute(route: any, leg: any): RouteResult {
-  return {
-    distance: leg.distance,
-    duration: leg.duration,
-    durationInTraffic: leg.duration_in_traffic,
-    startAddress: leg.start_address,
-    endAddress: leg.end_address,
-    points: decodePolyline(route.overview_polyline.points),
-    steps: leg.steps.map((step: any) => {
-      const stepData: any = {
-        instruction: step.html_instructions?.replace(/<[^>]*>/g, "") || "",
-        distance: step.distance,
-        duration: step.duration,
-        startLocation: step.start_location,
-        endLocation: step.end_location,
-        maneuver: step.maneuver,
-        travelMode: step.travel_mode,
-      };
-
-      // Add transit details if available
-      if (step.transit_details) {
-        stepData.transitDetails = {
-          lineName: step.transit_details.line?.short_name || step.transit_details.line?.name,
-          lineColor: step.transit_details.line?.color,
-          vehicleType: step.transit_details.line?.vehicle?.type,
-          departureStop: step.transit_details.departure_stop?.name,
-          arrivalStop: step.transit_details.arrival_stop?.name,
-          numStops: step.transit_details.num_stops,
-        };
-      }
-
-      return stepData;
-    }),
-    bounds: route.bounds,
-    summary: route.summary || "",
-    warnings: route.warnings || [],
+// Map travel mode to Routes API format
+function mapTravelMode(mode: TravelMode): string {
+  const modeMap: Record<TravelMode, string> = {
+    driving: "DRIVE",
+    walking: "WALK",
+    transit: "TRANSIT",
+    bicycling: "BICYCLE",
   };
+  return modeMap[mode] || "DRIVE";
 }
+
+// Format duration text from seconds
+function formatDuration(seconds: number): string {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  if (hours > 0) {
+    return `${hours} ч ${minutes} мин`;
+  }
+  return `${minutes} мин`;
+}
+
+// Format distance text from meters
+function formatDistance(meters: number): string {
+  if (meters >= 1000) {
+    return `${(meters / 1000).toFixed(1)} км`;
+  }
+  return `${meters} м`;
+}
+
+// Extract maneuver from instruction
+function extractManeuver(instruction: string): string | undefined {
+  const lowerInstr = instruction.toLowerCase();
+  if (lowerInstr.includes("turn left") || lowerInstr.includes("поверните налево")) return "turn-left";
+  if (lowerInstr.includes("turn right") || lowerInstr.includes("поверните направо")) return "turn-right";
+  if (lowerInstr.includes("u-turn") || lowerInstr.includes("разворот")) return "uturn";
+  if (lowerInstr.includes("merge") || lowerInstr.includes("въезд")) return "merge";
+  if (lowerInstr.includes("roundabout") || lowerInstr.includes("кольц")) return "roundabout";
+  if (lowerInstr.includes("straight") || lowerInstr.includes("прямо")) return "straight";
+  return undefined;
+}
+
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -156,56 +159,139 @@ serve(async (req) => {
 
     console.log("Directions request:", { origin, destination, mode, alternatives, language });
 
-    // Format origin and destination
-    const formatLocation = (loc: { lat: number; lng: number } | string): string => {
-      if (typeof loc === "string") return encodeURIComponent(loc);
-      return `${loc.lat},${loc.lng}`;
+    // Format location for Routes API
+    const formatLocation = (loc: { lat: number; lng: number } | string): any => {
+      if (typeof loc === "string") {
+        return { address: loc };
+      }
+      return {
+        location: {
+          latLng: {
+            latitude: loc.lat,
+            longitude: loc.lng,
+          },
+        },
+      };
     };
 
-    // Build waypoints string if provided
-    let waypointsParam = "";
-    if (waypoints && waypoints.length > 0) {
-      waypointsParam = `&waypoints=optimize:true|${waypoints.map(w => `${w.lat},${w.lng}`).join("|")}`;
-    }
-
-    // Build URL with all parameters
-    const params = new URLSearchParams({
+    // Build request body for Routes API
+    const requestBody: any = {
       origin: formatLocation(origin),
       destination: formatLocation(destination),
-      mode: mode,
-      alternatives: alternatives.toString(),
-      language: language,
-      key: apiKey,
-    });
+      travelMode: mapTravelMode(mode),
+      routingPreference: mode === "driving" ? "TRAFFIC_AWARE" : undefined,
+      computeAlternativeRoutes: alternatives,
+      languageCode: language,
+      units: "METRIC",
+    };
 
-    // Add departure_time for traffic info (driving mode only)
-    if (mode === "driving") {
-      params.append("departure_time", "now");
+    // Add waypoints if provided
+    if (waypoints && waypoints.length > 0) {
+      requestBody.intermediates = waypoints.map(w => ({
+        location: {
+          latLng: {
+            latitude: w.lat,
+            longitude: w.lng,
+          },
+        },
+      }));
     }
 
-    const url = `https://maps.googleapis.com/maps/api/directions/json?${params}${waypointsParam}`;
+    const url = "https://routes.googleapis.com/directions/v2:computeRoutes";
 
-    console.log("Fetching directions from Google API...");
+    console.log("Fetching directions from Routes API...");
 
-    const response = await fetch(url);
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": apiKey,
+        "X-Goog-FieldMask": "routes.duration,routes.distanceMeters,routes.polyline.encodedPolyline,routes.legs.duration,routes.legs.distanceMeters,routes.legs.startLocation,routes.legs.endLocation,routes.legs.steps.navigationInstruction,routes.legs.steps.distanceMeters,routes.legs.steps.staticDuration,routes.legs.steps.startLocation,routes.legs.steps.endLocation,routes.viewport,routes.warnings,routes.description",
+      },
+      body: JSON.stringify(requestBody),
+    });
+
     const data = await response.json();
 
-    if (data.status !== "OK") {
-      console.error("Google API error:", data.status, data.error_message);
+    if (data.error) {
+      console.error("Routes API error:", data.error);
       return new Response(
         JSON.stringify({ 
-          error: `Google API error: ${data.status}`, 
-          message: data.error_message,
-          status: data.status
+          error: `Routes API error: ${data.error.status}`, 
+          message: data.error.message,
+          status: data.error.status
         }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Parse all routes (main + alternatives)
+    if (!data.routes || data.routes.length === 0) {
+      console.error("No routes found");
+      return new Response(
+        JSON.stringify({ error: "No routes found", status: "ZERO_RESULTS" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Parse all routes
     const routes: RouteResult[] = data.routes.map((route: any) => {
-      const leg = route.legs[0];
-      return parseRoute(route, leg);
+      const leg = route.legs?.[0] || {};
+      const durationSeconds = parseInt(route.duration?.replace("s", "") || "0");
+      const distanceMeters = route.distanceMeters || 0;
+
+      return {
+        distance: { 
+          text: formatDistance(distanceMeters), 
+          value: distanceMeters 
+        },
+        duration: { 
+          text: formatDuration(durationSeconds), 
+          value: durationSeconds 
+        },
+        durationInTraffic: { 
+          text: formatDuration(durationSeconds), 
+          value: durationSeconds 
+        },
+        startAddress: "",
+        endAddress: "",
+        points: route.polyline?.encodedPolyline 
+          ? decodePolyline(route.polyline.encodedPolyline) 
+          : [],
+        steps: (leg.steps || []).map((step: any) => {
+          const stepDuration = parseInt(step.staticDuration?.replace("s", "") || "0");
+          const stepDistance = step.distanceMeters || 0;
+          const instruction = step.navigationInstruction?.instructions || "";
+          
+          return {
+            instruction: instruction.replace(/<[^>]*>/g, ""),
+            distance: { text: formatDistance(stepDistance), value: stepDistance },
+            duration: { text: formatDuration(stepDuration), value: stepDuration },
+            startLocation: step.startLocation?.latLng 
+              ? { lat: step.startLocation.latLng.latitude, lng: step.startLocation.latLng.longitude }
+              : { lat: 0, lng: 0 },
+            endLocation: step.endLocation?.latLng
+              ? { lat: step.endLocation.latLng.latitude, lng: step.endLocation.latLng.longitude }
+              : { lat: 0, lng: 0 },
+            maneuver: extractManeuver(instruction),
+            travelMode: mode.toUpperCase(),
+          };
+        }),
+        bounds: route.viewport ? {
+          northeast: { 
+            lat: route.viewport.high?.latitude || 0, 
+            lng: route.viewport.high?.longitude || 0 
+          },
+          southwest: { 
+            lat: route.viewport.low?.latitude || 0, 
+            lng: route.viewport.low?.longitude || 0 
+          },
+        } : {
+          northeast: { lat: 0, lng: 0 },
+          southwest: { lat: 0, lng: 0 },
+        },
+        summary: route.description || "",
+        warnings: route.warnings || [],
+      };
     });
 
     console.log("Directions fetched successfully:", {
@@ -219,7 +305,6 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         routes,
-        // For backward compatibility, also return the first route's data at top level
         ...routes[0]
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
