@@ -42,7 +42,7 @@ export const RolesSection = () => {
   ];
 
   return (
-    <section id="roles" className="py-24 justify-between">
+    <section id="roles" className="py-24">
       <div className="container mx-auto px-4">
         {/* Section Header */}
         <div className="text-center max-w-2xl mx-auto mb-16">
