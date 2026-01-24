@@ -4,9 +4,9 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { 
   Navigation, MapPin, Clock, Route as RouteIcon, Car, 
-  Footprints, Bus, Bike, ArrowLeft, Search, X, Loader2,
-  ChevronRight, DollarSign, Fuel, AlertTriangle, RotateCcw,
-  Layers, Navigation2, Volume2, VolumeX, ChevronDown, ChevronUp
+  Footprints, Bus, Bike, ArrowLeft, Loader2,
+  ChevronRight, DollarSign, AlertTriangle, RotateCcw,
+  X, ChevronDown, ChevronUp
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,9 @@ import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { MapStyleSelector, MapStyle, mapTileUrls } from "@/components/map/MapStyleSelector";
 import { cn } from "@/lib/utils";
-import { useVoiceNavigation } from "@/hooks/useVoiceNavigation";
+import { useVoiceNavigation, VoiceGender } from "@/hooks/useVoiceNavigation";
+import { VoiceSettingsPanel, VoiceSettings } from "@/components/navigation/VoiceSettingsPanel";
+import { OpenInGoogleMapsButton } from "@/components/navigation/OpenInGoogleMapsButton";
 
 // Types
 type TravelMode = "driving" | "walking" | "transit" | "bicycling";
@@ -189,14 +191,42 @@ const Navigator = () => {
   const [panelCollapsed, setPanelCollapsed] = useState(false);
   const [currentPosition, setCurrentPosition] = useState<Coords | null>(null);
   const [autoRouteBuilt, setAutoRouteBuilt] = useState(false);
-  const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [isNavigating, setIsNavigating] = useState(false);
   
-  // Voice navigation hook
-  const { speak, speakInstruction, stop: stopVoice, isSpeaking } = useVoiceNavigation({ 
-    enabled: voiceEnabled, 
-    language 
+  // Voice settings state
+  const [voiceSettings, setVoiceSettings] = useState<VoiceSettings>({
+    enabled: true,
+    gender: "male" as VoiceGender,
+    rate: 1.0,
   });
+  
+  // Voice navigation hook with settings
+  const { 
+    speak, 
+    speakInstruction, 
+    stop: stopVoice, 
+    isSpeaking,
+    updateVoiceSettings,
+  } = useVoiceNavigation({ 
+    enabled: voiceSettings.enabled, 
+    language,
+    gender: voiceSettings.gender,
+    rate: voiceSettings.rate,
+  });
+
+  // Update voice settings when changed
+  const handleVoiceSettingsChange = useCallback((newSettings: VoiceSettings) => {
+    setVoiceSettings(newSettings);
+    updateVoiceSettings(newSettings.gender, newSettings.rate);
+  }, [updateVoiceSettings]);
+
+  // Test voice
+  const handleTestVoice = useCallback(() => {
+    const testPhrase = language === "ru" 
+      ? "Через 200 метров поверните направо"
+      : "In 200 meters, turn right";
+    speak(testPhrase);
+  }, [speak, language]);
   
   // Refs
   const mapRef = useRef<L.Map | null>(null);
@@ -506,7 +536,7 @@ const Navigator = () => {
 
   // Find the next maneuver and announce it
   const checkAndAnnounceManeuver = useCallback((currentPos: Coords) => {
-    if (!selectedRoute || !voiceEnabled || !isNavigating) return;
+    if (!selectedRoute || !voiceSettings.enabled || !isNavigating) return;
 
     const steps = selectedRoute.steps;
     
@@ -551,7 +581,7 @@ const Navigator = () => {
         speak("Вы прибыли к месту назначения");
       }
     }
-  }, [selectedRoute, voiceEnabled, isNavigating, travelMode, calculateDistance, speakInstruction, speak]);
+  }, [selectedRoute, voiceSettings.enabled, isNavigating, travelMode, calculateDistance, speakInstruction, speak]);
 
   // Start real-time navigation with GPS tracking
   const startNavigation = useCallback(() => {
@@ -564,7 +594,7 @@ const Navigator = () => {
     lastAnnouncedStepRef.current = -1;
     
     // Announce route start
-    if (selectedRoute && voiceEnabled) {
+    if (selectedRoute && voiceSettings.enabled) {
       speak(`Маршрут: ${selectedRoute.distance.text}, время в пути ${selectedRoute.duration.text}`);
     }
 
@@ -606,7 +636,7 @@ const Navigator = () => {
         timeout: 10000 
       }
     );
-  }, [selectedRoute, voiceEnabled, speak, checkAndAnnounceManeuver, toast, t]);
+  }, [selectedRoute, voiceSettings.enabled, speak, checkAndAnnounceManeuver, toast, t]);
 
   // Stop navigation
   const stopNavigation = useCallback(() => {
@@ -737,7 +767,7 @@ const Navigator = () => {
                 onClick={useMyLocation}
                 title={t.myLocation}
               >
-                <Navigation2 className="h-4 w-4" />
+                <Navigation className="h-4 w-4" />
               </Button>
             </div>
 
@@ -801,20 +831,26 @@ const Navigator = () => {
               )}
             </Button>
             
-            {/* Voice Toggle */}
-            <Button
-              variant={voiceEnabled ? "secondary" : "outline"}
-              size="icon"
-              onClick={() => setVoiceEnabled(!voiceEnabled)}
-              title={voiceEnabled ? "Отключить голос" : "Включить голос"}
-            >
-              {voiceEnabled ? (
-                <Volume2 className={cn("h-4 w-4", isSpeaking && "text-primary animate-pulse")} />
-              ) : (
-                <VolumeX className="h-4 w-4" />
-              )}
-            </Button>
+            {/* Voice Settings Panel */}
+            <VoiceSettingsPanel
+              settings={voiceSettings}
+              onChange={handleVoiceSettingsChange}
+              isSpeaking={isSpeaking}
+              onTestVoice={handleTestVoice}
+            />
           </div>
+          
+          {/* Open in External Maps */}
+          {selectedRoute && (
+            <div className="mt-2">
+              <OpenInGoogleMapsButton
+                origin={fromAddress}
+                destination={toAddress}
+                travelMode={travelMode}
+                className="w-full"
+              />
+            </div>
+          )}
           
           {/* Start/Stop Navigation Button */}
           {selectedRoute && (
