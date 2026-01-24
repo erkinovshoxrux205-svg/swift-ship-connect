@@ -20,7 +20,6 @@ import {
   BarChart3,
   FileText,
   Navigation,
-  Calculator,
   Plus,
 } from "lucide-react";
 
@@ -35,7 +34,6 @@ const clientNavItems: NavItem[] = [
   { title: "orders.myOrders", icon: Package, href: "/dashboard#orders" },
   { title: "deals.myDeals", icon: FileText, href: "/dashboard#deals" },
   { title: "favorites.title", icon: Heart, href: "/dashboard#favorites" },
-  { title: "calculator.title", icon: Calculator, href: "/dashboard#calculator" },
   { title: "orders.createNew", icon: Plus, href: "/dashboard#create-order" },
 ];
 
