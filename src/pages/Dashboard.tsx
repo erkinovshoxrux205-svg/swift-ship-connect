@@ -112,7 +112,7 @@ const Dashboard = () => {
   }];
   return <DashboardLayout breadcrumbs={breadcrumbs}>
       {/* Welcome Section */}
-      <div className="mb-6 animate-fade-up">
+      <div className="mb-6 animate-fade-up mx-0 my-0 px-[199px]">
         
         
       </div>
