@@ -1,372 +1,427 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { useToast } from "@/hooks/use-toast";
-import { Mail, Phone, Eye, EyeOff, Loader2, ArrowLeft, User, Truck, Smartphone } from "lucide-react";
-
-import { useFirebaseAuth } from "@/hooks/useFirebaseAuth";
-import { BRAND } from "@/config/brand";
-
+import { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
-
-type AuthView = "login" | "signup" | "reset" | "phone-verify";
+import { User, Truck, ArrowLeft, Loader2, Gift, Phone, Mail, KeyRound } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { z } from "zod";
+import { supabase } from "@/integrations/supabase/client";
+import { BRAND } from "@/config/brand";
+import { PhoneOTPVerification } from "@/components/auth/PhoneOTPVerification";
+import { PasswordResetForm } from "@/components/auth/PasswordResetForm";
 type Role = "client" | "carrier";
-
-const AuthPage = () => {
-  const { toast } = useToast();
+type AuthMethod = "email" | "phone";
+const Auth = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const {
-    signInWithEmail,
-    signUpWithEmail,
-    signInWithGoogle,
-    sendPhoneCode,
-    verifyPhoneCode,
-    sendPasswordReset,
     user,
-    loading: authLoading,
-  } = useFirebaseAuth();
+    signIn,
+    signUp,
+    loading: authLoading
+  } = useAuth();
+  const {
+    toast
+  } = useToast();
+  const {
+    t
+  } = useLanguage();
+  const emailSchema = z.string().email(t("auth.invalidEmail"));
+  const passwordSchema = z.string().min(6, `${t("auth.minChars")} 6 ${t("auth.chars")}`);
+  const nameSchema = z.string().min(2, `${t("auth.minChars")} 2 ${t("auth.chars")}`);
 
-  // Состояния
-  const [authView, setAuthView] = useState<AuthView>("login");
-  const [authMethod, setAuthMethod] = useState<"email" | "phone">("email");
-  const [showPassword, setShowPassword] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  // View state
+  const [showPasswordReset, setShowPasswordReset] = useState(false);
+  const [authMethod, setAuthMethod] = useState<AuthMethod>("email");
 
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
-  const [role, setRole] = useState<Role>("client");
-  const [phone, setPhone] = useState("");
-  const [otp, setOtp] = useState("");
-  const [confirmationResult, setConfirmationResult] = useState<any>(null);
+  // Login state
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPhone, setLoginPhone] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [loginLoading, setLoginLoading] = useState(false);
 
-  // Фикс мерцания: редирект только когда загрузка окончена и юзер есть
+  // Signup state
+  const [signupEmail, setSignupEmail] = useState("");
+  const [signupPhone, setSignupPhone] = useState("");
+  const [signupPassword, setSignupPassword] = useState("");
+  const [signupName, setSignupName] = useState("");
+  const [signupRole, setSignupRole] = useState<Role>("client");
+  const [signupLoading, setSignupLoading] = useState(false);
+  const [referralCode, setReferralCode] = useState("");
+  const [referralValid, setReferralValid] = useState<boolean | null>(null);
+  const [phoneVerified, setPhoneVerified] = useState(false);
+  const [signupStep, setSignupStep] = useState<'info' | 'verify'>('info');
+  useEffect(() => {
+    const refCode = searchParams.get("ref");
+    if (refCode) {
+      setReferralCode(refCode.toUpperCase());
+      validateReferralCode(refCode.toUpperCase());
+    }
+  }, [searchParams]);
   useEffect(() => {
     if (user && !authLoading) {
-      navigate("/dashboard", { replace: true });
+      navigate("/dashboard");
     }
   }, [user, authLoading, navigate]);
-
-  // --- ЛОГИКА ---
-
-  const handleEmailLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    const { error } = await signInWithEmail(email.trim(), password);
-    if (error) {
-      toast({
-        title: "Ошибка данных",
-        description: "Неверный логин или пароль. Проверьте правильность ввода.",
-        variant: "destructive",
-      });
-      setIsSubmitting(false);
+  const validateReferralCode = async (code: string) => {
+    if (!code.trim()) {
+      setReferralValid(null);
+      return;
     }
+    const {
+      data
+    } = await supabase.from("profiles").select("user_id").eq("referral_code", code.toUpperCase()).single();
+    setReferralValid(!!data);
   };
-
-  const handlePhoneSubmit = async (e: React.FormEvent) => {
+  const formatPhone = (value: string) => {
+    const digits = value.replace(/\D/g, '');
+    if (digits.startsWith('998')) {
+      const rest = digits.slice(3);
+      let formatted = '+998';
+      if (rest.length > 0) formatted += ' ' + rest.slice(0, 2);
+      if (rest.length > 2) formatted += ' ' + rest.slice(2, 5);
+      if (rest.length > 5) formatted += ' ' + rest.slice(5, 7);
+      if (rest.length > 7) formatted += ' ' + rest.slice(7, 9);
+      return formatted;
+    }
+    if (!digits.startsWith('998') && digits.length > 0) {
+      return '+998 ' + digits.slice(0, 9);
+    }
+    return value;
+  };
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
-    const { error, confirmationResult: result } = await sendPhoneCode(phone, "recaptcha-container");
-    if (error) {
-      toast({ title: "Ошибка", description: "Не удалось отправить СМС", variant: "destructive" });
-      setIsSubmitting(false);
+    if (authMethod === 'email') {
+      try {
+        emailSchema.parse(loginEmail);
+        passwordSchema.parse(loginPassword);
+      } catch (error) {
+        if (error instanceof z.ZodError) {
+          toast({
+            title: t("auth.validationError"),
+            description: error.errors[0].message,
+            variant: "destructive"
+          });
+          return;
+        }
+      }
+      setLoginLoading(true);
+      const {
+        error
+      } = await signIn(loginEmail, loginPassword);
+      if (error) {
+        let message = t("auth.loginFailed");
+        if (error.message.includes("Invalid login credentials")) message = t("auth.invalidCredentials");else if (error.message.includes("Email not confirmed")) message = t("auth.emailNotConfirmed");
+        toast({
+          title: t("auth.loginError"),
+          description: message,
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: t("auth.welcome"),
+          description: t("auth.loginSuccess")
+        });
+        navigate("/dashboard");
+      }
+      setLoginLoading(false);
     } else {
-      setConfirmationResult(result);
-      setAuthView("phone-verify");
-      setIsSubmitting(false);
+      // Phone login - find user by phone, then login with email
+      setLoginLoading(true);
+      const phoneDigits = loginPhone.replace(/\D/g, '');
+      const {
+        data: profile
+      } = await supabase.from('profiles').select('user_id').eq('phone', phoneDigits).single();
+      if (!profile) {
+        toast({
+          title: t("auth.loginError"),
+          description: "Пользователь с таким телефоном не найден",
+          variant: "destructive"
+        });
+        setLoginLoading(false);
+        return;
+      }
+
+      // Get user email
+      const {
+        data: userData
+      } = await supabase.auth.admin.getUserById(profile.user_id);
+      if (userData?.user?.email) {
+        const {
+          error
+        } = await signIn(userData.user.email, loginPassword);
+        if (error) {
+          toast({
+            title: t("auth.loginError"),
+            description: t("auth.invalidCredentials"),
+            variant: "destructive"
+          });
+        } else {
+          navigate("/dashboard");
+        }
+      } else {
+        toast({
+          title: t("auth.loginError"),
+          description: t("auth.invalidCredentials"),
+          variant: "destructive"
+        });
+      }
+      setLoginLoading(false);
     }
   };
-
-  const handleVerifyOtp = async () => {
-    setIsSubmitting(true);
-    const { error } = await verifyPhoneCode(confirmationResult, otp, role);
-    if (error) {
-      toast({ title: "Код неверный", variant: "destructive" });
-      setIsSubmitting(false);
+  const handleSignupContinue = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      emailSchema.parse(signupEmail);
+      passwordSchema.parse(signupPassword);
+      nameSchema.parse(signupName);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        toast({
+          title: t("auth.validationError"),
+          description: error.errors[0].message,
+          variant: "destructive"
+        });
+        return;
+      }
     }
+    if (signupPhone && !phoneVerified) {
+      setSignupStep('verify');
+      return;
+    }
+    await completeSignup();
   };
-
-  const handleGoogleAuth = async () => {
-    setIsSubmitting(true);
-    const { error } = await signInWithGoogle(role);
+  const completeSignup = async () => {
+    setSignupLoading(true);
+    const {
+      error,
+      data
+    } = await signUp(signupEmail, signupPassword, signupRole, signupName);
     if (error) {
+      let message = t("auth.registrationFailed");
+      if (error.message.includes("already registered")) message = t("auth.emailAlreadyRegistered");
       toast({
-        title: "Ошибка домена",
-        description: "Убедитесь, что домен lovable.app добавлен в Firebase Console.",
-        variant: "destructive",
+        title: t("auth.registrationError"),
+        description: message,
+        variant: "destructive"
       });
-      setIsSubmitting(false);
+      setSignupLoading(false);
+      return;
     }
+
+    // Update profile with phone
+    if (data?.user && signupPhone) {
+      await supabase.from('profiles').update({
+        phone: signupPhone.replace(/\D/g, ''),
+        phone_verified: phoneVerified
+      }).eq('user_id', data.user.id);
+    }
+
+    // Handle referral
+    if (referralCode && referralValid && data?.user) {
+      const {
+        data: referrerProfile
+      } = await supabase.from("profiles").select("user_id").eq("referral_code", referralCode.toUpperCase()).single();
+      if (referrerProfile) {
+        await supabase.from("referrals").insert({
+          referrer_id: referrerProfile.user_id,
+          referred_id: data.user.id,
+          referral_code: referralCode.toUpperCase()
+        });
+      }
+    }
+    toast({
+      title: t("auth.registrationSuccess"),
+      description: t("auth.welcomeToPlatform")
+    });
+    navigate("/dashboard");
+    setSignupLoading(false);
   };
-
-  if (authLoading && !user) {
-    return (
-      <div className="h-screen w-full flex items-center justify-center bg-[#0a0e14]">
-        <Loader2 className="animate-spin text-blue-500 w-12 h-12" />
-      </div>
-    );
+  if (authLoading) {
+    return <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>;
   }
+  if (showPasswordReset) {
+    return <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background flex items-center justify-center p-4">
+        <PasswordResetForm onBack={() => setShowPasswordReset(false)} onSuccess={() => setShowPasswordReset(false)} />
+      </div>;
+  }
+  return <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background flex items-center justify-center p-4">
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/4 -left-32 w-96 h-96 bg-customer/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-driver/10 rounded-full blur-3xl" />
+      </div>
 
-  return (
-    <div className="min-h-screen bg-[#0a0e14] text-white flex flex-col items-center justify-center p-4 font-sans">
-      <div id="recaptcha-container"></div>
+      <div className="relative w-full max-w-md">
+        <Button variant="ghost" className="mb-4" onClick={() => navigate("/")}>
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          {t("auth.backToHome")}
+        </Button>
 
-      <div className="w-full max-w-[400px] space-y-6">
-        <div className="text-center">
-          <h1 className="text-4xl font-black text-blue-500 tracking-tighter uppercase mb-1">
-            {BRAND?.name || "AsLogUz"}
-          </h1>
-          <p className="text-slate-500 text-sm italic">Логистика нового поколения</p>
-        </div>
+        <Card className="border-2">
+          <CardHeader className="text-center">
+            <CardTitle className="text-2xl font-bold">{BRAND.name}</CardTitle>
+            <CardDescription>{t("auth.platformDesc")}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Tabs defaultValue="login" className="w-full">
+              <TabsList className="grid w-full grid-cols-2 mb-6">
+                <TabsTrigger value="login">{t("auth.loginTab")}</TabsTrigger>
+                <TabsTrigger value="signup">{t("auth.registerTab")}</TabsTrigger>
+              </TabsList>
 
-        <Card className="bg-[#111827] border-slate-800 shadow-2xl border-t-4 border-t-blue-600">
-          <CardContent className="pt-6">
-            {/* ВОССТАНОВЛЕНИЕ ПАРОЛЯ */}
-            {authView === "reset" && (
-              <div className="space-y-4">
-                <Button variant="ghost" className="p-0 text-slate-400" onClick={() => setAuthView("login")}>
-                  <ArrowLeft className="w-4 h-4 mr-2" /> Назад
-                </Button>
-                <div className="space-y-1">
-                  <h2 className="text-xl font-bold">Сброс пароля</h2>
-                  <p className="text-sm text-slate-400">Ссылка придет на вашу почту</p>
-                </div>
-                <Input
-                  className="bg-slate-900 border-slate-700"
-                  placeholder="Email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-                <Button className="w-full bg-blue-600" onClick={() => sendPasswordReset(email)} disabled={isSubmitting}>
-                  Отправить ссылку
-                </Button>
-              </div>
-            )}
-
-            {/* ВЕРИФИКАЦИЯ СМС */}
-            {authView === "phone-verify" && (
-              <div className="space-y-6 text-center">
-                <div className="space-y-2">
-                  <h2 className="text-xl font-bold text-blue-400 text-center">Введите код</h2>
-                  <p className="text-sm text-slate-400">Код отправлен на {phone}</p>
-                </div>
-                <div className="flex justify-center">
-                  <InputOTP maxLength={6} value={otp} onChange={setOtp}>
-                    <InputOTPGroup className="gap-2">
-                      {[0, 1, 2, 3, 4, 5].map((i) => (
-                        <InputOTPSlot key={i} index={i} className="bg-slate-900 border-slate-700 w-12 h-12 text-xl" />
-                      ))}
-                    </InputOTPGroup>
-                  </InputOTP>
-                </div>
-                <Button
-                  className="w-full bg-blue-600 h-12"
-                  onClick={handleVerifyOtp}
-                  disabled={isSubmitting || otp.length < 6}
-                >
-                  Подтвердить вход
-                </Button>
-              </div>
-            )}
-
-            {/* ВХОД И РЕГИСТРАЦИЯ */}
-            {(authView === "login" || authView === "signup") && (
-              <Tabs value={authView} onValueChange={(v) => setAuthView(v as AuthView)}>
-                <TabsList className="grid w-full grid-cols-2 bg-slate-950 mb-6 p-1 h-12">
-                  <TabsTrigger value="login" className="data-[state=active]:bg-blue-600">
-                    Вход
-                  </TabsTrigger>
-                  <TabsTrigger value="signup" className="data-[state=active]:bg-blue-600">
-                    Регистрация
-                  </TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="login" className="space-y-4">
-                  <div className="flex bg-slate-950 p-1 rounded-lg gap-1 mb-4 border border-slate-800">
-                    <Button
-                      variant={authMethod === "email" ? "secondary" : "ghost"}
-                      className="flex-1 h-8 text-xs"
-                      onClick={() => setAuthMethod("email")}
-                    >
-                      <Mail className="w-3 h-3 mr-2" /> Email
+              {/* Login Form */}
+              <TabsContent value="login">
+                <form onSubmit={handleLogin} className="space-y-4">
+                  {/* Auth Method Toggle */}
+                  <div className="flex rounded-lg border p-1 gap-1">
+                    <Button type="button" variant={authMethod === 'email' ? 'default' : 'ghost'} className="flex-1" size="sm" onClick={() => setAuthMethod('email')}>
+                      <Mail className="w-4 h-4 mr-2" />
+                      Email
                     </Button>
-                    <Button
-                      variant={authMethod === "phone" ? "secondary" : "ghost"}
-                      className="flex-1 h-8 text-xs"
-                      onClick={() => setAuthMethod("phone")}
-                    >
-                      <Smartphone className="w-3 h-3 mr-2" /> Телефон
+                    <Button type="button" variant={authMethod === 'phone' ? 'default' : 'ghost'} className="flex-1" size="sm" onClick={() => setAuthMethod('phone')}>
+                      <Phone className="w-4 h-4 mr-2" />
+                      Телефон
                     </Button>
                   </div>
 
-                  {authMethod === "email" ? (
-                    <form onSubmit={handleEmailLogin} className="space-y-4">
-                      <div className="space-y-2">
-                        <Label>Email</Label>
-                        <Input
-                          className="bg-slate-900 border-slate-700"
-                          type="email"
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <div className="flex justify-between items-center">
-                          <Label>Пароль</Label>
-                          <button
-                            type="button"
-                            onClick={() => setAuthView("reset")}
-                            className="text-xs text-blue-500 hover:underline"
-                          >
-                            Забыли?
-                          </button>
-                        </div>
-                        <div className="relative">
-                          <Input
-                            className="bg-slate-900 border-slate-700 pr-10"
-                            type={showPassword ? "text" : "password"}
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            required
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShowPassword(!showPassword)}
-                            className="absolute right-3 top-3 text-slate-500"
-                          >
-                            {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                          </button>
-                        </div>
-                      </div>
-                      <Button type="submit" className="w-full bg-blue-600 h-11 font-bold" disabled={isSubmitting}>
-                        {isSubmitting ? <Loader2 className="animate-spin" /> : "Войти в аккаунт"}
-                      </Button>
-                    </form>
-                  ) : (
-                    <form onSubmit={handlePhoneSubmit} className="space-y-4">
-                      <Label>Ваш номер телефона</Label>
-                      <Input
-                        className="bg-slate-900 border-slate-700"
-                        placeholder="+998 90 123 45 67"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                        required
-                      />
-                      <Button type="submit" className="w-full bg-blue-600" disabled={isSubmitting}>
-                        Отправить код
-                      </Button>
-                    </form>
-                  )}
-                </TabsContent>
+                  {authMethod === 'email' ? <div className="space-y-2">
+                      <Label htmlFor="login-email">{t("auth.email")}</Label>
+                      <Input id="login-email" type="email" placeholder="example@mail.com" value={loginEmail} onChange={e => setLoginEmail(e.target.value)} required />
+                    </div> : <div className="space-y-2">
+                      <Label htmlFor="login-phone">Телефон</Label>
+                      <Input id="login-phone" type="tel" placeholder="+998 90 123 45 67" value={loginPhone} onChange={e => setLoginPhone(formatPhone(e.target.value))} required />
+                    </div>}
 
-                <TabsContent value="signup" className="space-y-4">
-                  <Input
-                    className="bg-slate-900 border-slate-700"
-                    placeholder="Полное имя"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                  />
-                  <Input
-                    className="bg-slate-900 border-slate-700"
-                    type="email"
-                    placeholder="Email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                  />
-                  <Input
-                    className="bg-slate-900 border-slate-700"
-                    type="password"
-                    placeholder="Пароль"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                  />
-
-                  <div className="pt-2">
-                    <Label className="text-xs text-slate-500 mb-2 block uppercase">Выберите роль:</Label>
-                    <RadioGroup
-                      value={role}
-                      onValueChange={(v) => setRole(v as Role)}
-                      className="grid grid-cols-2 gap-3"
-                    >
-                      <div className="relative">
-                        <RadioGroupItem value="client" id="r-client" className="peer sr-only" />
-                        <Label
-                          htmlFor="r-client"
-                          className="flex flex-col items-center p-3 border-2 border-slate-800 rounded-xl cursor-pointer peer-data-[state=checked]:border-blue-500 peer-data-[state=checked]:bg-blue-500/5"
-                        >
-                          <User className="w-5 h-5 mb-1 text-slate-400" />{" "}
-                          <span className="text-[10px] font-bold">КЛИЕНТ</span>
-                        </Label>
-                      </div>
-                      <div className="relative">
-                        <RadioGroupItem value="carrier" id="r-carrier" className="peer sr-only" />
-                        <Label
-                          htmlFor="r-carrier"
-                          className="flex flex-col items-center p-3 border-2 border-slate-800 rounded-xl cursor-pointer peer-data-[state=checked]:border-blue-500 peer-data-[state=checked]:bg-blue-500/5"
-                        >
-                          <Truck className="w-5 h-5 mb-1 text-slate-400" />{" "}
-                          <span className="text-[10px] font-bold">ВОДИТЕЛЬ</span>
-                        </Label>
-                      </div>
-                    </RadioGroup>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="login-password">{t("auth.password")}</Label>
+                      <Button type="button" variant="link" className="h-auto p-0 text-xs" onClick={() => setShowPasswordReset(true)}>
+                        <KeyRound className="w-3 h-3 mr-1" />
+                        Забыли пароль?
+                      </Button>
+                    </div>
+                    <Input id="login-password" type="password" placeholder="••••••••" value={loginPassword} onChange={e => setLoginPassword(e.target.value)} required />
                   </div>
-                  <Button
-                    className="w-full bg-blue-600 h-11 font-bold"
-                    onClick={() => signUpWithEmail(email, password, role, name)}
-                    disabled={isSubmitting}
-                  >
-                    Зарегистрироваться
+
+                  <Button type="submit" className="w-full" variant="hero" size="lg" disabled={loginLoading}>
+                    {loginLoading ? <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        {t("auth.loggingIn")}
+                      </> : t("auth.login")}
                   </Button>
-                </TabsContent>
-              </Tabs>
-            )}
+                </form>
+              </TabsContent>
 
-            <div className="relative my-8">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-slate-800"></span>
-              </div>
-              <div className="relative flex justify-center text-[10px] uppercase font-bold text-slate-500">
-                <span className="bg-[#111827] px-4 italic">Быстрый вход</span>
-              </div>
-            </div>
+              {/* Signup Form */}
+              <TabsContent value="signup">
+                {signupStep === 'verify' ? <div className="space-y-4">
+                    <div className="text-center mb-4">
+                      <h3 className="font-semibold">Подтвердите телефон</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Мы отправим код на {signupPhone}
+                      </p>
+                    </div>
+                    <PhoneOTPVerification phone={signupPhone} onPhoneChange={setSignupPhone} onVerified={() => {
+                  setPhoneVerified(true);
+                  completeSignup();
+                }} />
+                    <Button variant="ghost" className="w-full" onClick={() => setSignupStep('info')}>
+                      Назад
+                    </Button>
+                  </div> : <form onSubmit={handleSignupContinue} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-name">{t("profile.name")}</Label>
+                      <Input id="signup-name" type="text" placeholder={t("auth.namePlaceholder")} value={signupName} onChange={e => setSignupName(e.target.value)} required />
+                    </div>
 
-            <Button
-              variant="outline"
-              className="w-full border-slate-700 hover:bg-slate-800 h-11 text-sm transition-all"
-              onClick={handleGoogleAuth}
-              disabled={isSubmitting}
-            >
-              <svg className="w-4 h-4 mr-3" viewBox="0 0 24 24">
-                <path
-                  fill="#4285F4"
-                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                />
-                <path
-                  fill="#34A853"
-                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                />
-                <path
-                  fill="#FBBC05"
-                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                />
-                <path
-                  fill="#EA4335"
-                  d="M12 5.04c1.64 0 3.1.56 4.26 1.67l3.18-3.18C17.47 1.63 14.94 1 12 1 7.73 1 4.05 3.43 2.18 7l3.66 2.84C6.71 7.25 9.14 5.04 12 5.04z"
-                />
-              </svg>
-              Продолжить через Google
-            </Button>
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-email">{t("auth.email")}</Label>
+                      <Input id="signup-email" type="email" placeholder="example@mail.com" value={signupEmail} onChange={e => setSignupEmail(e.target.value)} required />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-phone">
+                        Телефон <span className="text-muted-foreground">(опционально)</span>
+                      </Label>
+                      <Input id="signup-phone" type="tel" placeholder="+998 90 123 45 67" value={signupPhone} onChange={e => setSignupPhone(formatPhone(e.target.value))} />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-password">{t("auth.password")}</Label>
+                      <Input id="signup-password" type="password" placeholder={t("auth.passwordPlaceholder")} value={signupPassword} onChange={e => setSignupPassword(e.target.value)} required />
+                    </div>
+
+                    {/* Role Selection */}
+                    <div className="space-y-3">
+                      <Label>{t("auth.selectRole")}</Label>
+                      <RadioGroup value={signupRole} onValueChange={value => setSignupRole(value as Role)} className="grid grid-cols-2 gap-4">
+                        <Label htmlFor="role-client" className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 cursor-pointer transition-all ${signupRole === "client" ? "border-customer bg-customer-light" : "border-border hover:border-customer/50"}`}>
+                          <RadioGroupItem value="client" id="role-client" className="sr-only" />
+                          <div className="w-12 h-12 rounded-full gradient-customer flex items-center justify-center">
+                            <User className="w-6 h-6 text-white" />
+                          </div>
+                          <span className="font-medium">{t("role.client")}</span>
+                          <span className="text-xs text-muted-foreground text-center">
+                            {t("auth.iOrderDelivery")}
+                          </span>
+                        </Label>
+
+                        <Label htmlFor="role-carrier" className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 cursor-pointer transition-all ${signupRole === "carrier" ? "border-driver bg-driver-light" : "border-border hover:border-driver/50"}`}>
+                          <RadioGroupItem value="carrier" id="role-carrier" className="sr-only" />
+                          <div className="w-12 h-12 rounded-full gradient-driver flex items-center justify-center">
+                            <Truck className="w-6 h-6 text-white" />
+                          </div>
+                          <span className="font-medium">{t("role.carrier")}</span>
+                          <span className="text-xs text-muted-foreground text-center">
+                            {t("auth.iExecuteOrders")}
+                          </span>
+                        </Label>
+                      </RadioGroup>
+                    </div>
+
+                    {/* Referral Code */}
+                    <div className="space-y-2">
+                      <Label htmlFor="referral-code" className="flex items-center gap-2">
+                        <Gift className="w-4 h-4" />
+                        {t("auth.referralCode")}
+                      </Label>
+                      <Input id="referral-code" type="text" placeholder={t("auth.enterFriendCode")} value={referralCode} onChange={e => {
+                    const code = e.target.value.toUpperCase();
+                    setReferralCode(code);
+                    validateReferralCode(code);
+                  }} className={referralValid === true ? "border-green-500" : referralValid === false ? "border-red-500" : ""} />
+                      {referralValid === true && <p className="text-xs text-green-600">✓ {t("auth.codeValid")}</p>}
+                      {referralValid === false && referralCode && <p className="text-xs text-red-600">✗ {t("auth.codeNotFound")}</p>}
+                    </div>
+
+                    <Button type="submit" className="w-full" variant={signupRole === "client" ? "customer" : "driver"} size="lg" disabled={signupLoading}>
+                      {signupLoading ? <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          {t("auth.registering")}
+                        </> : signupPhone && !phoneVerified ? <>
+                          <Phone className="w-4 h-4 mr-2" />
+                          Подтвердить телефон
+                        </> : `${t("auth.registerAs")} ${signupRole === "client" ? t("role.client") : t("role.carrier")}`}
+                    </Button>
+
+                    <div className="text-center">
+                      
+                      
+                    </div>
+                  </form>}
+              </TabsContent>
+            </Tabs>
           </CardContent>
         </Card>
       </div>
-    </div>
-  );
+    </div>;
 };
-
-export default AuthPage;
+export default Auth;
