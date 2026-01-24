@@ -3,9 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Mail, Phone, Eye, EyeOff, Loader2, ArrowLeft, User, Truck, Smartphone } from "lucide-react";
 
-// ВНИМАНИЕ: Проверь наличие этих файлов! Если их нет, проект выдаст ошибку Build Error.
-import { useFirebaseAuth } from "@/contexts/useFirebaseAuth";
-import { BRAND } from "@/constants/brand";
+import { useFirebaseAuth } from "@/hooks/useFirebaseAuth";
+import { BRAND } from "@/config/brand";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
