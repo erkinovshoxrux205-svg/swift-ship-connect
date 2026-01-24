@@ -12,10 +12,11 @@ import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   User, Truck, ArrowLeft, ArrowRight, Loader2, 
-  Mail, Building, Globe, CheckCircle, Shield
+  Mail, Building, Globe, CheckCircle, Shield, Phone
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
+import { PhoneOTPVerification } from "@/components/auth/PhoneOTPVerification";
 
 const emailSchema = z.string().email("Неверный формат email");
 const passwordSchema = z.string().min(6, "Минимум 6 символов");
@@ -40,8 +41,9 @@ interface RegistrationData {
 const STEPS = [
   { id: 1, title: "Роль", icon: User },
   { id: 2, title: "Контакты", icon: Mail },
-  { id: 3, title: "Компания", icon: Building },
-  { id: 4, title: "Подтверждение", icon: CheckCircle },
+  { id: 3, title: "Телефон", icon: Phone },
+  { id: 4, title: "Компания", icon: Building },
+  { id: 5, title: "Подтверждение", icon: CheckCircle },
 ];
 
 const COUNTRIES = [
@@ -71,6 +73,7 @@ const MultiStepRegistration = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
+  const [phoneVerified, setPhoneVerified] = useState(false);
 
   const [formData, setFormData] = useState<RegistrationData>({
     email: "",
@@ -133,10 +136,14 @@ const MultiStepRegistration = () => {
     }
 
     if (step === 3) {
-      // Company info - optional for individuals
+      // Phone verification step - handled by component
     }
 
     if (step === 4) {
+      // Company info - optional for individuals
+    }
+
+    if (step === 5) {
       if (!formData.termsAccepted) {
         newErrors.termsAccepted = "Примите условия использования";
       }
@@ -150,8 +157,13 @@ const MultiStepRegistration = () => {
   };
 
   const handleNext = () => {
+    if (currentStep === 3) {
+      // Phone verification step - skip validation, handle separately
+      setCurrentStep(prev => Math.min(prev + 1, 5));
+      return;
+    }
     if (validateStep(currentStep)) {
-      setCurrentStep(prev => Math.min(prev + 1, 4));
+      setCurrentStep(prev => Math.min(prev + 1, 5));
     }
   };
 
@@ -160,7 +172,7 @@ const MultiStepRegistration = () => {
   };
 
   const handleSubmit = async () => {
-    if (!validateStep(4)) return;
+    if (!validateStep(5)) return;
 
     setLoading(true);
 
@@ -191,7 +203,8 @@ const MultiStepRegistration = () => {
         await supabase
           .from("profiles")
           .update({
-            phone: formData.phone,
+            phone: formData.phone.replace(/\D/g, ''),
+            phone_verified: phoneVerified,
             company_name: formData.companyName || null,
           })
           .eq("user_id", data.user.id);
@@ -427,8 +440,29 @@ const MultiStepRegistration = () => {
               </div>
             )}
 
-            {/* Step 3: Company Info */}
+            {/* Step 3: Phone Verification */}
             {currentStep === 3 && (
+              <div className="space-y-4">
+                <h3 className="font-semibold text-center">Подтвердите телефон</h3>
+                <p className="text-sm text-muted-foreground text-center">
+                  Верификация телефона повышает безопасность аккаунта
+                </p>
+                <PhoneOTPVerification
+                  phone={formData.phone}
+                  onPhoneChange={(phone) => updateField("phone", phone)}
+                  onVerified={() => {
+                    setPhoneVerified(true);
+                    handleNext();
+                  }}
+                />
+                <Button variant="ghost" className="w-full" onClick={handleNext}>
+                  Пропустить
+                </Button>
+              </div>
+            )}
+
+            {/* Step 4: Company Info */}
+            {currentStep === 4 && (
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="country">Страна *</Label>
@@ -476,8 +510,8 @@ const MultiStepRegistration = () => {
               </div>
             )}
 
-            {/* Step 4: Confirmation */}
-            {currentStep === 4 && (
+            {/* Step 5: Confirmation */}
+            {currentStep === 5 && (
               <div className="space-y-4">
                 {/* Summary */}
                 <div className="glass-card p-4 space-y-3">

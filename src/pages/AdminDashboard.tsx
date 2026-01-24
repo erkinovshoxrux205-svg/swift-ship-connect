@@ -13,7 +13,7 @@ import { DealsTable } from "@/components/admin/DealsTable";
 import { AnalyticsCharts } from "@/components/admin/AnalyticsCharts";
 import { PromoCodesManager } from "@/components/admin/PromoCodesManager";
 import { AIChatAnalytics } from "@/components/admin/AIChatAnalytics";
-import { KYCDashboard } from "@/components/admin/KYCDashboard";
+import { EnhancedKYCDashboard } from "@/components/admin/EnhancedKYCDashboard";
 import { AuditLogsTable } from "@/components/admin/AuditLogsTable";
 import { RegistrationRequestsTable } from "@/components/admin/RegistrationRequestsTable";
 import { AdminRolesManager } from "@/components/admin/AdminRolesManager";
@@ -116,7 +116,7 @@ const AdminDashboard = () => {
           <TabsContent value="users"><UsersTable /></TabsContent>
           <TabsContent value="deals"><DealsTable /></TabsContent>
           <TabsContent value="registrations"><RegistrationRequestsTable /></TabsContent>
-          <TabsContent value="kyc"><KYCDashboard /></TabsContent>
+          <TabsContent value="kyc"><EnhancedKYCDashboard /></TabsContent>
           <TabsContent value="roles"><AdminRolesManager /></TabsContent>
           <TabsContent value="audit"><AuditLogsTable /></TabsContent>
           <TabsContent value="promos"><PromoCodesManager /></TabsContent>
