@@ -174,6 +174,7 @@ const translations: Record<Language, Record<string, string>> = {
     
     // Deals
     "deals.myDeals": "Мои сделки",
+    "deals.count": "сделок",
     "deals.status.pending": "Ожидает",
     "deals.status.accepted": "Принята",
     "deals.status.in_transit": "В пути",
@@ -742,6 +743,7 @@ const translations: Record<Language, Record<string, string>> = {
     
     // Deals
     "deals.myDeals": "Mening bitimlarim",
+    "deals.count": "ta bitim",
     "deals.status.pending": "Kutilmoqda",
     "deals.status.accepted": "Qabul qilindi",
     "deals.status.in_transit": "Yo'lda",
@@ -1310,6 +1312,7 @@ const translations: Record<Language, Record<string, string>> = {
     
     // Deals
     "deals.myDeals": "My Deals",
+    "deals.count": "deals",
     "deals.status.pending": "Pending",
     "deals.status.accepted": "Accepted",
     "deals.status.in_transit": "In Transit",
