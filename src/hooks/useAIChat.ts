@@ -7,7 +7,7 @@ type Message = { role: "user" | "assistant"; content: string };
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-assistant`;
 
 export const useAIChat = () => {
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
@@ -93,6 +93,17 @@ export const useAIChat = () => {
   }, [lastLogId]);
 
   const sendMessage = useCallback(async (input: string) => {
+    // Require authentication before sending messages
+    if (!session?.access_token) {
+      console.error("No session token available");
+      setMessages((prev) => [
+        ...prev,
+        { role: "user", content: input },
+        { role: "assistant", content: "Пожалуйста, войдите в систему для использования AI-ассистента." }
+      ]);
+      return;
+    }
+
     const userMsg: Message = { role: "user", content: input };
     const newMessages = [...messages, userMsg];
     setMessages(newMessages);
@@ -115,16 +126,20 @@ export const useAIChat = () => {
     };
 
     try {
+      // Use the user's session access token for authentication
       const resp = await fetch(CHAT_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({ messages: newMessages }),
       });
 
       if (!resp.ok || !resp.body) {
+        if (resp.status === 401) {
+          throw new Error("Сессия истекла. Пожалуйста, войдите снова.");
+        }
         throw new Error("Failed to start stream");
       }
 
@@ -195,13 +210,14 @@ export const useAIChat = () => {
       });
     } catch (error) {
       console.error("AI chat error:", error);
-      const errorMessages = [...newMessages, { role: "assistant" as const, content: "Произошла ошибка. Попробуйте ещё раз." }];
+      const errorMessage = error instanceof Error ? error.message : "Произошла ошибка. Попробуйте ещё раз.";
+      const errorMessages = [...newMessages, { role: "assistant" as const, content: errorMessage }];
       setMessages(errorMessages);
       saveMessages(errorMessages);
     } finally {
       setIsLoading(false);
     }
-  }, [messages, saveMessages, logChat]);
+  }, [messages, saveMessages, logChat, session]);
 
   const clearMessages = useCallback(async () => {
     setMessages([]);

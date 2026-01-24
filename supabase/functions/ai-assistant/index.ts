@@ -41,7 +41,6 @@ serve(async (req) => {
   }
 
   try {
-    const { messages } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -50,71 +49,98 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+      throw new Error("Supabase configuration missing");
+    }
+
+    // Verify user authentication
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized: No authorization header" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    
+    // Validate the user's JWT token
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    
+    if (authError || !user) {
+      console.error("Auth error:", authError);
+      return new Response(
+        JSON.stringify({ error: "Unauthorized: Invalid token" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log("Authenticated user:", user.id);
+
+    const { messages } = await req.json();
     console.log("Processing AI request with", messages.length, "messages");
 
     // Fetch top carriers with ratings for context
     let carriersContext = "";
-    if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
-      const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    
+    // Get carriers with their profiles and average ratings
+    const { data: carriers } = await supabase
+      .from("profiles")
+      .select(`
+        user_id,
+        full_name,
+        carrier_type,
+        vehicle_type,
+        company_name,
+        is_verified
+      `)
+      .not("carrier_type", "is", null);
 
-      // Get carriers with their profiles and average ratings
-      const { data: carriers } = await supabase
-        .from("profiles")
-        .select(`
-          user_id,
-          full_name,
-          carrier_type,
-          vehicle_type,
-          company_name,
-          is_verified
-        `)
-        .not("carrier_type", "is", null);
+    if (carriers && carriers.length > 0) {
+      // Get ratings for all carriers
+      const carrierIds = carriers.map(c => c.user_id);
+      const { data: ratings } = await supabase
+        .from("ratings")
+        .select("rated_id, score")
+        .in("rated_id", carrierIds);
 
-      if (carriers && carriers.length > 0) {
-        // Get ratings for all carriers
-        const carrierIds = carriers.map(c => c.user_id);
-        const { data: ratings } = await supabase
-          .from("ratings")
-          .select("rated_id, score")
-          .in("rated_id", carrierIds);
-
-        // Calculate average ratings
-        const ratingMap = new Map<string, { total: number; count: number }>();
-        ratings?.forEach(r => {
-          const existing = ratingMap.get(r.rated_id) || { total: 0, count: 0 };
-          ratingMap.set(r.rated_id, {
-            total: existing.total + r.score,
-            count: existing.count + 1,
-          });
+      // Calculate average ratings
+      const ratingMap = new Map<string, { total: number; count: number }>();
+      ratings?.forEach(r => {
+        const existing = ratingMap.get(r.rated_id) || { total: 0, count: 0 };
+        ratingMap.set(r.rated_id, {
+          total: existing.total + r.score,
+          count: existing.count + 1,
         });
+      });
 
-        // Get completed deals count
-        const { data: deals } = await supabase
-          .from("deals")
-          .select("carrier_id")
-          .eq("status", "delivered")
-          .in("carrier_id", carrierIds);
+      // Get completed deals count
+      const { data: deals } = await supabase
+        .from("deals")
+        .select("carrier_id")
+        .eq("status", "delivered")
+        .in("carrier_id", carrierIds);
 
-        const dealsMap = new Map<string, number>();
-        deals?.forEach(d => {
-          dealsMap.set(d.carrier_id, (dealsMap.get(d.carrier_id) || 0) + 1);
-        });
+      const dealsMap = new Map<string, number>();
+      deals?.forEach(d => {
+        dealsMap.set(d.carrier_id, (dealsMap.get(d.carrier_id) || 0) + 1);
+      });
 
-        // Build context with carrier info
-        const carriersList = carriers.map(c => {
-          const rating = ratingMap.get(c.user_id);
-          const avgRating = rating ? (rating.total / rating.count).toFixed(1) : "нет оценок";
-          const dealsCount = dealsMap.get(c.user_id) || 0;
-          const verified = c.is_verified ? "✓ верифицирован" : "";
-          const type = c.carrier_type === "company" ? "Компания" : "Водитель";
-          const name = c.company_name || c.full_name || "Без имени";
-          
-          return `- ${name} (${type}): рейтинг ${avgRating}, ${dealsCount} выполненных заказов ${verified}`;
-        }).join("\n");
+      // Build context with carrier info
+      const carriersList = carriers.map(c => {
+        const rating = ratingMap.get(c.user_id);
+        const avgRating = rating ? (rating.total / rating.count).toFixed(1) : "нет оценок";
+        const dealsCount = dealsMap.get(c.user_id) || 0;
+        const verified = c.is_verified ? "✓ верифицирован" : "";
+        const type = c.carrier_type === "company" ? "Компания" : "Водитель";
+        const name = c.company_name || c.full_name || "Без имени";
+        
+        return `- ${name} (${type}): рейтинг ${avgRating}, ${dealsCount} выполненных заказов ${verified}`;
+      }).join("\n");
 
-        if (carriersList) {
-          carriersContext = `\nАКТУАЛЬНЫЕ ПЕРЕВОЗЧИКИ НА ПЛАТФОРМЕ:\n${carriersList}\n`;
-        }
+      if (carriersList) {
+        carriersContext = `\nАКТУАЛЬНЫЕ ПЕРЕВОЗЧИКИ НА ПЛАТФОРМЕ:\n${carriersList}\n`;
       }
     }
 
