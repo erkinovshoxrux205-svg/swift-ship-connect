@@ -39,22 +39,6 @@ export const RolesSection = () => {
       bgClass: "bg-driver-light",
       borderClass: "border-driver/20",
     },
-    {
-      id: "company",
-      icon: Building2,
-      titleKey: "role.company",
-      emoji: "🏢",
-      descKey: "landing.roles.companyDesc",
-      features: [
-        "landing.roles.companyF1",
-        "landing.roles.companyF2",
-        "landing.roles.companyF3",
-        "landing.roles.companyF4",
-      ],
-      variant: "company" as const,
-      bgClass: "bg-company-light",
-      borderClass: "border-company/20",
-    },
   ];
 
   return (
@@ -62,12 +46,8 @@ export const RolesSection = () => {
       <div className="container mx-auto px-4">
         {/* Section Header */}
         <div className="text-center max-w-2xl mx-auto mb-16">
-          <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-            {t("landing.roles.title")}
-          </h2>
-          <p className="text-muted-foreground">
-            {t("landing.roles.subtitle")}
-          </p>
+          <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">{t("landing.roles.title")}</h2>
+          <p className="text-muted-foreground">{t("landing.roles.subtitle")}</p>
         </div>
 
         {/* Roles Grid */}
@@ -80,7 +60,9 @@ export const RolesSection = () => {
             >
               {/* Role Icon & Title */}
               <div className="flex items-center gap-4 mb-6">
-                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center gradient-${role.id} transition-transform group-hover:scale-110 group-hover:rotate-3`}>
+                <div
+                  className={`w-14 h-14 rounded-2xl flex items-center justify-center gradient-${role.id} transition-transform group-hover:scale-110 group-hover:rotate-3`}
+                >
                   <role.icon className="w-7 h-7 text-white" />
                 </div>
                 <div>
@@ -92,9 +74,7 @@ export const RolesSection = () => {
               </div>
 
               {/* Description */}
-              <p className="text-muted-foreground mb-6">
-                {t(role.descKey)}
-              </p>
+              <p className="text-muted-foreground mb-6">{t(role.descKey)}</p>
 
               {/* Features List */}
               <ul className="space-y-3 mb-8">
