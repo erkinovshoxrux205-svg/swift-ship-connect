@@ -151,10 +151,19 @@ export const FirebaseAuthProvider = ({ children }: { children: ReactNode }) => {
   const sendPhoneCode = async (phoneNumber: string, containerId: string) => {
     try {
       clearRecaptcha();
+      
+      // Check if container exists
+      const container = document.getElementById(containerId);
+      if (!container) {
+        console.error("reCAPTCHA container not found:", containerId);
+        return { error: new Error("auth/recaptcha-container-not-found") };
+      }
+      
       const appVerifier = setupRecaptcha(containerId);
       const confirmationResult = await firebasePhoneSignIn(phoneNumber, appVerifier);
       return { error: null, confirmationResult };
     } catch (error: any) {
+      console.error("Phone auth error:", error);
       clearRecaptcha();
       return { error: error as Error };
     }

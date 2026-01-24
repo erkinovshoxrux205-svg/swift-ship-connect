@@ -281,21 +281,48 @@ const AuthPage = () => {
 
     setSignupLoading(true);
     setPendingRole(signupRole);
-    const { error, confirmationResult: result } = await sendPhoneCode('+' + phoneDigits, 'recaptcha-container');
     
-    if (error) {
+    try {
+      const { error, confirmationResult: result } = await sendPhoneCode('+' + phoneDigits, 'recaptcha-container');
+      
+      if (error) {
+        console.error("Phone signup error:", error);
+        const errorCode = (error as any).code || '';
+        let errorMessage = getFirebaseErrorMessage(errorCode);
+        
+        // More specific error messages
+        if (errorCode === 'auth/invalid-app-credential' || errorCode === 'auth/operation-not-allowed') {
+          errorMessage = "Телефонная аутентификация не настроена. Используйте Email или Google.";
+        } else if (errorCode === 'auth/captcha-check-failed') {
+          errorMessage = "Ошибка проверки reCAPTCHA. Попробуйте снова.";
+        } else if (errorCode === 'auth/quota-exceeded') {
+          errorMessage = "Превышен лимит SMS. Попробуйте позже.";
+        }
+        
+        toast({
+          title: "Ошибка отправки кода",
+          description: errorMessage,
+          variant: "destructive"
+        });
+        setSignupLoading(false);
+        return;
+      }
+
+      if (result) {
+        setConfirmationResult(result);
+        setAuthView("phone-verify");
+        toast({
+          title: "Код отправлен",
+          description: "Введите код из SMS"
+        });
+      }
+    } catch (err: any) {
+      console.error("Phone signup exception:", err);
       toast({
         title: "Ошибка",
-        description: getFirebaseErrorMessage((error as any).code),
+        description: "Телефонная аутентификация недоступна. Используйте Email или Google.",
         variant: "destructive"
       });
-      setSignupLoading(false);
-      return;
-    }
-
-    if (result) {
-      setConfirmationResult(result);
-      setAuthView("phone-verify");
     }
     setSignupLoading(false);
   };
