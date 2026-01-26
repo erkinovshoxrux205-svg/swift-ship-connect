@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Mapbox Token Test</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        body { margin: 0; padding: 0; }
+        #map { height: 100vh; width: 100%; }
+        #info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            z-index: 1000;
+            font-family: monospace;
+            max-width: 400px;
+        }
+    </style>
+</head>
+<body>
+    <div id="info">
+        <strong>Mapbox Token Test</strong><br>
+        <span id="status">Initializing...</span>
+    </div>
+    <div id="map"></div>
+    
+    <script>
+        const MAPBOX_TOKEN = "pk.eyJ1Ijoic3VyZW5hbWVzIiwiYSI6ImNta3UxenZjajF2aDUzY3NhZXNqY3JjeXkifQ.lBzScNO-wcVp0gFnExQx-w";
+        const statusEl = document.getElementById('status');
+        
+        function log(msg) {
+            console.log(msg);
+            statusEl.innerHTML += '<br>' + msg;
+        }
+        
+        log('Creating map...');
+        
+        try {
+            const map = L.map('map').setView([41.3, 69.3], 6);
+            log('✅ Map created');
+            
+            const tileUrl = `https://api.mapbox.com/styles/v1/mapbox/navigation-day-v1/tiles/{z}/{x}/{y}?access_token=${MAPBOX_TOKEN}`;
+            log('Tile URL: ' + tileUrl.substring(0, 60) + '...');
+            
+            const tileLayer = L.tileLayer(tileUrl, {
+                maxZoom: 19,
+                tileSize: 512,
+                zoomOffset: -1,
+                attribution: '© Mapbox'
+            });
+            
+            tileLayer.on('loading', () => log('🔄 Tiles loading...'));
+            tileLayer.on('load', () => log('✅ Tiles loaded!'));
+            tileLayer.on('tileerror', (e) => {
+                log('❌ Tile error: ' + e.error);
+                console.error('Tile error details:', e);
+            });
+            
+            tileLayer.addTo(map);
+            log('Tile layer added to map');
+            
+            // Test fetch
+            fetch(`https://api.mapbox.com/styles/v1/mapbox/navigation-day-v1?access_token=${MAPBOX_TOKEN}`)
+                .then(r => {
+                    if (r.ok) {
+                        log('✅ Token is valid - API responded with ' + r.status);
+                        return r.json();
+                    } else {
+                        log('❌ Token invalid - API responded with ' + r.status);
+                        throw new Error('API error: ' + r.status);
+                    }
+                })
+                .then(data => {
+                    log('✅ Style data fetched: ' + data.name);
+                })
+                .catch(err => {
+                    log('❌ Fetch error: ' + err.message);
+                    console.error(err);
+                });
+                
+        } catch (err) {
+            log('❌ Error: ' + err.message);
+            console.error(err);
+        }
+    </script>
+</body>
+</html>
