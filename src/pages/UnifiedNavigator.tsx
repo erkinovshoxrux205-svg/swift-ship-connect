@@ -188,18 +188,37 @@ const UnifiedNavigator = () => {
   useEffect(() => {
     // Cleanup existing map first
     if (mapRef.current) {
+      console.log("Cleaning up existing map");
       mapRef.current.remove();
       mapRef.current = null;
     }
 
     // Small delay to ensure container is properly sized
     const initTimer = setTimeout(() => {
+      console.log("[Map Init] Checking container readiness...");
+      
       if (!mapContainerRef.current) {
-        console.error("Map container not ready");
+        console.error("[Map Init] ERROR: Map container ref is null");
         return;
       }
 
-      console.log("Initializing Leaflet map with style:", mapStyle);
+      // Check if container has dimensions
+      const rect = mapContainerRef.current.getBoundingClientRect();
+      console.log("[Map Init] Container dimensions:", { width: rect.width, height: rect.height });
+      
+      if (rect.width === 0 || rect.height === 0) {
+        console.error("[Map Init] ERROR: Container has zero dimensions");
+        // Try again after a longer delay
+        setTimeout(() => {
+          if (mapContainerRef.current) {
+            const retry = mapContainerRef.current.getBoundingClientRect();
+            console.log("[Map Init] Retry container dimensions:", { width: retry.width, height: retry.height });
+          }
+        }, 500);
+        return;
+      }
+
+      console.log("[Map Init] Initializing Leaflet map with style:", mapStyle);
 
       try {
         const map = L.map(mapContainerRef.current, {
@@ -207,35 +226,48 @@ const UnifiedNavigator = () => {
           attributionControl: false,
         }).setView([41.3, 69.3], 6);
 
+        console.log("[Map Init] Leaflet map object created");
         mapRef.current = map;
 
         const tileConfig = mapTileUrls[mapStyle];
-        console.log("Loading tiles from:", tileConfig.url);
+        console.log("[Map Init] Loading tiles from:", tileConfig.url);
         
-        L.tileLayer(tileConfig.url, {
+        const tileLayer = L.tileLayer(tileConfig.url, {
           maxZoom: 19,
           tileSize: 512,
           zoomOffset: -1,
           subdomains: tileConfig.subdomains || undefined,
           attribution: tileConfig.attribution || '',
-        }).addTo(map);
+        });
+
+        // Listen to tile layer events
+        tileLayer.on('loading', () => console.log("[Map Init] Tiles loading started..."));
+        tileLayer.on('load', () => console.log("[Map Init] Tiles loaded successfully!"));
+        tileLayer.on('tileerror', (err) => console.error("[Map Init] Tile error:", err));
+        
+        tileLayer.addTo(map);
+        console.log("[Map Init] Tile layer added to map");
 
         L.control.zoom({ position: "bottomright" }).addTo(map);
 
         // Force multiple invalidateSize calls to ensure tiles render
+        console.log("[Map Init] Scheduling map size invalidations...");
         [100, 300, 500, 1000].forEach(delay => {
           setTimeout(() => {
             if (mapRef.current) {
               mapRef.current.invalidateSize();
+              console.log(`[Map Init] invalidateSize called at ${delay}ms`);
             }
           }, delay);
         });
 
         // Get current location
         if (navigator.geolocation) {
+          console.log("[Map Init] Requesting geolocation...");
           navigator.geolocation.getCurrentPosition(
             (pos) => {
               const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+              console.log("[Map Init] Got location:", coords);
               setCurrentPosition(coords);
               if (mapRef.current) {
                 mapRef.current.setView([coords.lat, coords.lng], 14);
@@ -243,21 +275,25 @@ const UnifiedNavigator = () => {
               }
             },
             (err) => {
-              console.log("Geolocation not available:", err.message);
+              console.log("[Map Init] Geolocation not available:", err.message);
             },
-            { enableHighAccuracy: true }
+            { enableHighAccuracy: true, timeout: 10000 }
           );
         }
         
-        console.log("Leaflet map initialized successfully");
+        console.log("[Map Init] ✅ Map initialized successfully");
       } catch (err) {
-        console.error("Failed to initialize map:", err);
+        console.error("[Map Init] ❌ Failed to initialize map:", err);
+        if (err instanceof Error) {
+          console.error("[Map Init] Error details:", err.message, err.stack);
+        }
       }
     }, 100);
 
     return () => {
       clearTimeout(initTimer);
       if (mapRef.current) {
+        console.log("[Map Init] Cleanup: Removing map");
         mapRef.current.remove();
         mapRef.current = null;
       }
@@ -808,11 +844,12 @@ const UnifiedNavigator = () => {
       <div className="flex-1 relative overflow-hidden" style={{ minHeight: '300px' }}>
         <div 
           ref={mapContainerRef} 
-          className="absolute inset-0 z-0 bg-muted"
+          className="absolute inset-0 z-0"
           style={{ 
             minHeight: '300px',
             width: '100%',
-            height: '100%'
+            height: '100%',
+            backgroundColor: '#e5e7eb'
           }}
         />
 
