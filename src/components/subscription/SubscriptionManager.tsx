@@ -230,37 +230,37 @@ export const SubscriptionManager = () => {
   const currentPlanName = currentSubscription?.plan?.name || 'basic';
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Current subscription status */}
       {currentSubscription && (
         <Card className="border-primary/20 bg-primary/5">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <Crown className="w-5 h-5 text-primary" />
+          <CardHeader className="pb-3 sm:pb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                <Crown className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                 Текущий план
               </CardTitle>
-              <Badge className="bg-primary text-primary-foreground">
+              <Badge className="bg-primary text-primary-foreground w-fit">
                 {currentSubscription.plan?.display_name || currentSubscription.plan?.name || 'Базовый'}
               </Badge>
             </div>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-              <div>
-                <span className="text-muted-foreground">Статус</span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 text-xs sm:text-sm">
+              <div className="space-y-1">
+                <span className="text-muted-foreground block">Статус</span>
                 <Badge variant={currentSubscription.status === 'active' ? 'default' : 'secondary'}>
                   {currentSubscription.status === 'active' ? 'Активна' : 'Ожидает'}
                 </Badge>
               </div>
-              <div>
-                <span className="text-muted-foreground">Действует до</span>
+              <div className="space-y-1">
+                <span className="text-muted-foreground block">Действует до</span>
                 <p className="font-medium">
                   {new Date(currentSubscription.current_period_end).toLocaleDateString('ru-RU')}
                 </p>
               </div>
-              <div>
-                <span className="text-muted-foreground">Автопродление</span>
+              <div className="space-y-1">
+                <span className="text-muted-foreground block">Автопродление</span>
                 <p className="font-medium">
                   {currentSubscription.cancel_at_period_end ? 'Отключено' : 'Включено'}
                 </p>
@@ -273,11 +273,11 @@ export const SubscriptionManager = () => {
       {/* Billing period toggle */}
       <div className="flex justify-center">
         <Tabs value={billingPeriod} onValueChange={(v) => setBillingPeriod(v as 'monthly' | 'yearly')}>
-          <TabsList>
-            <TabsTrigger value="monthly">Ежемесячно</TabsTrigger>
-            <TabsTrigger value="yearly" className="relative">
+          <TabsList className="w-full sm:w-auto">
+            <TabsTrigger value="monthly" className="flex-1 sm:flex-initial text-xs sm:text-sm">Ежемесячно</TabsTrigger>
+            <TabsTrigger value="yearly" className="relative flex-1 sm:flex-initial text-xs sm:text-sm">
               Ежегодно
-              <Badge className="absolute -top-2 -right-2 bg-green-500 text-white text-[10px] px-1">
+              <Badge className="absolute -top-2 -right-1 sm:-right-2 bg-green-500 text-white text-[9px] sm:text-[10px] px-1">
                 -17%
               </Badge>
             </TabsTrigger>
@@ -286,7 +286,7 @@ export const SubscriptionManager = () => {
       </div>
 
       {/* Plans grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         {plans.map((plan) => {
           const PlanIcon = PLAN_ICONS[plan.name] || Zap;
           const isCurrentPlan = plan.name === currentPlanName;
@@ -309,50 +309,51 @@ export const SubscriptionManager = () => {
                 </Badge>
               )}
               
-              <CardHeader>
+              <CardHeader className="pb-3 sm:pb-4">
                 <div className="flex items-center gap-2">
-                  <div className={`p-2 rounded-lg ${
+                  <div className={`p-1.5 sm:p-2 rounded-lg shrink-0 ${
                     plan.name === 'pro' 
                       ? 'bg-primary text-primary-foreground' 
                       : 'bg-muted'
                   }`}>
-                    <PlanIcon className="w-5 h-5" />
+                    <PlanIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                   </div>
-                  <div>
-                    <CardTitle>{plan.display_name || plan.name}</CardTitle>
-                    <CardDescription>{plan.description}</CardDescription>
+                  <div className="min-w-0">
+                    <CardTitle className="text-base sm:text-lg truncate">{plan.display_name || plan.name}</CardTitle>
+                    <CardDescription className="text-xs sm:text-sm truncate">{plan.description}</CardDescription>
                   </div>
                 </div>
               </CardHeader>
               
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-3 sm:space-y-4">
                 <div>
-                  <span className="text-3xl font-bold">
+                  <span className="text-2xl sm:text-3xl font-bold">
                     {price === 0 ? 'Бесплатно' : formatPrice(monthlyEquivalent)}
                   </span>
                   {price > 0 && (
-                    <span className="text-muted-foreground">/мес</span>
+                    <span className="text-sm sm:text-base text-muted-foreground">/мес</span>
                   )}
                   {billingPeriod === 'yearly' && price > 0 && (
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-xs sm:text-sm text-muted-foreground">
                       {formatPrice(price)} в год
                     </p>
                   )}
                 </div>
                 
-                <ul className="space-y-2">
+                <ul className="space-y-1.5 sm:space-y-2">
                   {plan.features.map((feature, i) => (
-                    <li key={i} className="flex items-start gap-2 text-sm">
-                      <Check className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
-                      <span>{feature}</span>
+                    <li key={i} className="flex items-start gap-2 text-xs sm:text-sm">
+                      <Check className="w-3 h-3 sm:w-4 sm:h-4 text-green-500 mt-0.5 shrink-0" />
+                      <span className="leading-tight">{feature}</span>
                     </li>
                   ))}
                 </ul>
               </CardContent>
               
-              <CardFooter>
+              <CardFooter className="pt-3 sm:pt-4">
                 <Button 
-                  className="w-full"
+                  className="w-full text-xs sm:text-sm"
+                  size="sm"
                   variant={plan.name === 'pro' ? 'default' : 'outline'}
                   disabled={isCurrentPlan || processing}
                   onClick={() => handleSelectPlan(plan)}
@@ -363,7 +364,7 @@ export const SubscriptionManager = () => {
                     'Перейти на бесплатный'
                   ) : (
                     <>
-                      <CreditCard className="w-4 h-4 mr-2" />
+                      <CreditCard className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
                       Оформить
                     </>
                   )}

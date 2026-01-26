@@ -100,23 +100,18 @@ const Dashboard = () => {
   const isClient = role === "client";
   const isCarrier = role === "carrier";
   const isAdmin = role === "admin";
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return t("greeting.morning") || "Good morning";
-    if (hour < 18) return t("greeting.afternoon") || "Good afternoon";
-    return t("greeting.evening") || "Good evening";
-  };
+
   const userName = user.email?.split("@")[0] || "User";
   const breadcrumbs = [{
     label: t("nav.dashboard")
   }];
   return <DashboardLayout breadcrumbs={breadcrumbs}>
       {/* Welcome Section */}
-      <div className="mb-6 animate-fade-up px-[107px]">
-        <h1 className="text-xl md:text-2xl font-bold tracking-tight mb-1">
-          {getGreeting()}, <span className="text-gradient">{userName}</span>
+      <div className="mb-4 sm:mb-6 animate-fade-up">
+        <h1 className="text-lg sm:text-xl md:text-2xl font-bold tracking-tight mb-1">
+          <span className="text-gradient">{userName}</span>
         </h1>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-xs sm:text-sm text-muted-foreground">
           {isClient && t("dashboard.subtitle.client")}
           {isCarrier && t("dashboard.subtitle.carrier")}
           {isAdmin && t("dashboard.subtitle.admin")}
@@ -124,7 +119,7 @@ const Dashboard = () => {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 md:gap-4 mb-4 sm:mb-6">
         <div className="animate-fade-up stagger-1">
           <KPICard title={isClient ? t("orders.myOrders") : t("orders.available")} value={stats.orders} icon={<Package className="w-5 h-5 md:w-6 md:h-6" />} variant="primary" />
         </div>
