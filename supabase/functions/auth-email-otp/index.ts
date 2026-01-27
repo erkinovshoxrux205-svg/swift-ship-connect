@@ -9,6 +9,10 @@ const corsHeaders = {
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
+const SMTP_HOST = Deno.env.get('SMTP_HOST');
+const SMTP_PORT = Deno.env.get('SMTP_PORT');
+const SMTP_USER = Deno.env.get('SMTP_USER');
+const SMTP_PASSWORD = Deno.env.get('SMTP_PASSWORD');
 
 // Generate 5-digit OTP
 function generateOTP(): string {
@@ -95,8 +99,7 @@ async function sendEmailViaResend(email: string, otp: string, type: string): Pro
   }
 }
 
-// Handler function
-async function handleRequest(req: Request): Promise<Response> {
+serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -126,18 +129,73 @@ async function handleRequest(req: Request): Promise<Response> {
         );
       }
 
+      // Check account lockout
+      const { data: lockout } = await supabase
+        .from('account_lockouts')
+        .select('*')
+        .eq('identifier', email)
+        .gt('locked_until', new Date().toISOString())
+        .single();
+
+      if (lockout) {
+        const minutesLeft = Math.ceil((new Date(lockout.locked_until).getTime() - Date.now()) / 60000);
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: `Аккаунт временно заблокирован. Попробуйте через ${minutesLeft} мин.`,
+            locked_until: lockout.locked_until
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 429 }
+        );
+      }
+
+      // Rate limiting - max 5 OTPs per hour
+      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+      const { count } = await supabase
+        .from('email_otp_codes')
+        .select('*', { count: 'exact', head: true })
+        .eq('email', email)
+        .gte('created_at', oneHourAgo);
+
+      if (count && count >= 5) {
+        // Lock account for 10 minutes
+        await supabase.from('account_lockouts').insert({
+          identifier: email,
+          locked_until: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+          reason: 'OTP rate limit exceeded'
+        });
+
+        await supabase.from('security_events').insert({
+          event_type: 'email_otp_rate_limit',
+          severity: 'warning',
+          description: `Rate limit exceeded for email: ${email}`,
+          ip_address: ipAddress,
+          metadata: { email, count }
+        });
+
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: 'Слишком много запросов. Аккаунт заблокирован на 10 минут.' 
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 429 }
+        );
+      }
+
       // Generate OTP
       const otp = generateOTP();
       const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
 
-      // Store OTP in otp_codes table
+      // Store OTP
       const { data: otpData, error: insertError } = await supabase
-        .from('otp_codes')
+        .from('email_otp_codes')
         .insert({
           email,
           code: otp,
           type,
           expires_at: expiresAt.toISOString(),
+          ip_address: ipAddress,
+          user_agent: userAgent,
         })
         .select()
         .single();
@@ -154,7 +212,10 @@ async function handleRequest(req: Request): Promise<Response> {
       const sent = await sendEmailViaResend(email, otp, type);
 
       if (!sent) {
-        console.log(`[DEV] OTP for ${email}: ${otp}`);
+        return new Response(
+          JSON.stringify({ success: false, error: 'Failed to send email' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+        );
       }
 
       console.log(`OTP sent to ${email}: ${otp} (dev mode)`);
@@ -181,9 +242,24 @@ async function handleRequest(req: Request): Promise<Response> {
         );
       }
 
+      // Check account lockout
+      const { data: lockout } = await supabase
+        .from('account_lockouts')
+        .select('*')
+        .eq('identifier', email)
+        .gt('locked_until', new Date().toISOString())
+        .single();
+
+      if (lockout) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Account temporarily locked' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 429 }
+        );
+      }
+
       // Find valid OTP
       const { data: otpRecord, error: findError } = await supabase
-        .from('otp_codes')
+        .from('email_otp_codes')
         .select('*')
         .eq('email', email)
         .eq('code', code)
@@ -194,6 +270,38 @@ async function handleRequest(req: Request): Promise<Response> {
         .single();
 
       if (findError || !otpRecord) {
+        // Increment failed attempts
+        await supabase.from('auth_attempts').insert({
+          identifier: email,
+          attempt_type: 'otp_verify',
+          success: false,
+          ip_address: ipAddress,
+          user_agent: userAgent
+        });
+
+        // Check if max attempts exceeded
+        const { count: failedCount } = await supabase
+          .from('auth_attempts')
+          .select('*', { count: 'exact', head: true })
+          .eq('identifier', email)
+          .eq('attempt_type', 'otp_verify')
+          .eq('success', false)
+          .gte('created_at', new Date(Date.now() - 10 * 60 * 1000).toISOString());
+
+        if (failedCount && failedCount >= 5) {
+          // Lock account
+          await supabase.from('account_lockouts').insert({
+            identifier: email,
+            locked_until: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+            reason: 'Too many failed OTP attempts'
+          });
+
+          return new Response(
+            JSON.stringify({ success: false, error: 'Слишком много неверных попыток. Аккаунт заблокирован на 10 минут.' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 429 }
+          );
+        }
+
         return new Response(
           JSON.stringify({ success: false, error: 'Неверный или истёкший код' }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
@@ -201,7 +309,7 @@ async function handleRequest(req: Request): Promise<Response> {
       }
 
       // Check max attempts
-      if (otpRecord.attempts >= (otpRecord.max_attempts || 5)) {
+      if (otpRecord.attempts >= otpRecord.max_attempts) {
         return new Response(
           JSON.stringify({ success: false, error: 'Превышено максимальное количество попыток' }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
@@ -210,16 +318,35 @@ async function handleRequest(req: Request): Promise<Response> {
 
       // Mark as verified
       await supabase
-        .from('otp_codes')
+        .from('email_otp_codes')
         .update({ verified: true, updated_at: new Date().toISOString() })
         .eq('id', otpRecord.id);
+
+      // Log successful attempt
+      await supabase.from('auth_attempts').insert({
+        identifier: email,
+        attempt_type: 'otp_verify',
+        success: true,
+        ip_address: ipAddress,
+        user_agent: userAgent
+      });
 
       // Update user profile if exists
       if (otpRecord.user_id) {
         await supabase.from('profiles').update({
           email_verified: true,
+          email_verified_at: new Date().toISOString()
         }).eq('user_id', otpRecord.user_id);
       }
+
+      await supabase.from('security_events').insert({
+        user_id: otpRecord.user_id,
+        event_type: 'email_verified',
+        severity: 'info',
+        description: `Email verified: ${email}`,
+        ip_address: ipAddress,
+        metadata: { email }
+      });
 
       return new Response(
         JSON.stringify({ 
@@ -235,7 +362,7 @@ async function handleRequest(req: Request): Promise<Response> {
     if (action === 'resend') {
       // Same as send but check last send time
       const { data: lastOtp } = await supabase
-        .from('otp_codes')
+        .from('email_otp_codes')
         .select('created_at')
         .eq('email', email)
         .order('created_at', { ascending: false })
@@ -256,39 +383,12 @@ async function handleRequest(req: Request): Promise<Response> {
         }
       }
 
-      // Generate new OTP
-      const otp = generateOTP();
-      const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
-
-      const { data: otpData, error: insertError } = await supabase
-        .from('otp_codes')
-        .insert({
-          email,
-          code: otp,
-          type,
-          expires_at: expiresAt.toISOString(),
-        })
-        .select()
-        .single();
-
-      if (insertError) {
-        return new Response(
-          JSON.stringify({ success: false, error: 'Failed to generate OTP' }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-        );
-      }
-
-      await sendEmailViaResend(email, otp, type);
-
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          message: 'OTP resent',
-          otpId: otpData.id,
-          expiresAt: expiresAt.toISOString(),
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      // Proceed with send action (reuse code above)
+      return await serve(new Request(req.url, {
+        method: 'POST',
+        headers: req.headers,
+        body: JSON.stringify({ action: 'send', email, type })
+      }));
     }
 
     return new Response(
@@ -303,6 +403,4 @@ async function handleRequest(req: Request): Promise<Response> {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     );
   }
-}
-
-serve(handleRequest);
+});

@@ -66,11 +66,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    // Safe access with type assertion after query
-    const profileData = data as { email_verified?: boolean; phone_verified?: boolean; account_status?: string } | null;
-    setEmailVerified(profileData?.email_verified || false);
-    setPhoneVerified(profileData?.phone_verified || false);
-    setAccountStatus(profileData?.account_status || 'active');
+    setEmailVerified(data?.email_verified || false);
+    setPhoneVerified(data?.phone_verified || false);
+    setAccountStatus(data?.account_status || 'pending');
   };
 
   const refreshUserData = async () => {

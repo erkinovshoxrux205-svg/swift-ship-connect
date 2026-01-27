@@ -20,7 +20,6 @@ import ApiDocs from "./pages/ApiDocs";
 import Subscription from "./pages/Subscription";
 import NotFound from "./pages/NotFound";
 import UnifiedNavigator from "./pages/UnifiedNavigator";
-import MapboxNavigator from "./pages/MapboxNavigator";
 import ClientTracking from "./pages/ClientTracking";
 
 const queryClient = new QueryClient();
@@ -45,13 +44,11 @@ const App = () => (
                 <Route path="/deals/:dealId/chat" element={<DealChat />} />
                 {/* Client Tracking - real-time driver location for clients */}
                 <Route path="/tracking/:dealId" element={<ClientTracking />} />
-                {/* Mapbox Navigator - new 3D navigation */}
-                <Route path="/navigate/:dealId" element={<MapboxNavigator />} />
-                <Route path="/navigator" element={<MapboxNavigator />} />
-                <Route path="/navigator/order/:orderId" element={<MapboxNavigator />} />
-                <Route path="/navigator/deal/:dealId" element={<MapboxNavigator />} />
-                {/* Legacy Navigator */}
-                <Route path="/navigator-legacy/:dealId" element={<UnifiedNavigator />} />
+                {/* Unified Navigator - single navigation component */}
+                <Route path="/navigate/:dealId" element={<UnifiedNavigator />} />
+                <Route path="/navigator" element={<UnifiedNavigator />} />
+                <Route path="/navigator/order/:orderId" element={<UnifiedNavigator />} />
+                <Route path="/navigator/deal/:dealId" element={<UnifiedNavigator />} />
                 <Route path="/admin" element={<AdminDashboard />} />
                 <Route path="/subscription" element={<Subscription />} />
                 <Route path="/profile" element={<UserProfile />} />
