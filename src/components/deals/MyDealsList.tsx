@@ -7,7 +7,7 @@ import {
   Truck, CheckCircle, Navigation, Flag, Star, Eye
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -41,7 +41,7 @@ interface Deal {
 }
 
 export const MyDealsList = () => {
-  const { user, role } = useAuth();
+  const { user, role } = useFirebaseAuth();
   const navigate = useNavigate();
   const { t, language } = useLanguage();
   const [deals, setDeals] = useState<Deal[]>([]);
@@ -78,9 +78,9 @@ export const MyDealsList = () => {
         .order("created_at", { ascending: false });
 
       if (role === "client") {
-        query.eq("client_id", user.id);
+        query.eq("client_id", user.uid);
       } else {
-        query.eq("carrier_id", user.id);
+        query.eq("carrier_id", user.uid);
       }
 
       const { data, error } = await query;
@@ -118,7 +118,7 @@ export const MyDealsList = () => {
         const { data: ratings } = await supabase
           .from("ratings")
           .select("score")
-          .eq("rated_id", user.id);
+          .eq("rated_id", user.uid);
         
         if (ratings && ratings.length > 0) {
           avgRating = ratings.reduce((acc, r) => acc + r.score, 0) / ratings.length;

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -53,7 +53,7 @@ const formatPrice = (price: number) => {
 };
 
 export const SubscriptionManager = () => {
-  const { user } = useAuth();
+  const { user } = useFirebaseAuth();
   const { toast } = useToast();
   
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
@@ -91,7 +91,7 @@ export const SubscriptionManager = () => {
       const { data: subData } = await supabase
         .from('user_subscriptions')
         .select('*, plan:subscription_plans(*)')
-        .eq('user_id', user.id)
+        .eq('user_id', user.uid)
         .eq('status', 'active')
         .maybeSingle();
 
@@ -152,7 +152,7 @@ export const SubscriptionManager = () => {
       await supabase
         .from('user_subscriptions')
         .insert({
-          user_id: user.id,
+          user_id: user.uid,
           plan_id: plan.id,
           status: 'active',
           current_period_end: periodEnd.toISOString(),
