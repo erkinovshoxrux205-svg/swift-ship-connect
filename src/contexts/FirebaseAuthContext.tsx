@@ -115,16 +115,29 @@ export const FirebaseAuthProvider = ({ children }: { children: ReactNode }) => {
 
   const syncUserWithSupabase = async (firebaseUser: User, role: AppRole, fullName: string, phone?: string, referralCode?: string) => {
     try {
+      console.log('Starting sync with Supabase for user:', firebaseUser.uid);
+      console.log('User email:', firebaseUser.email);
+      console.log('User role:', role);
+      
       // Check if profile exists
-      const { data: existingProfile } = await supabase
+      const { data: existingProfile, error: checkError } = await supabase
         .from('profiles')
         .select('user_id')
         .eq('user_id', firebaseUser.uid)
         .single();
 
+      console.log('Profile check result:', { existingProfile, checkError });
+
+      if (checkError && checkError.code !== 'PGRST116') {
+        console.error('Error checking existing profile:', checkError);
+        throw checkError;
+      }
+
       if (!existingProfile) {
+        console.log('Creating new profile for user:', firebaseUser.uid);
+        
         // Create profile
-        const { error: profileError } = await supabase
+        const { data: newProfile, error: profileError } = await supabase
           .from("profiles")
           .insert({
             user_id: firebaseUser.uid,
@@ -132,32 +145,54 @@ export const FirebaseAuthProvider = ({ children }: { children: ReactNode }) => {
             phone: phone?.replace(/\D/g, ''),
             email: firebaseUser.email,
             email_verified: firebaseUser.emailVerified
-          });
+          })
+          .select()
+          .single();
+
+        console.log('Profile creation result:', { newProfile, profileError });
 
         if (profileError) {
           console.error("Profile creation error:", profileError);
+          throw profileError;
         }
 
         // Assign role
-        const { error: roleError } = await supabase
+        const { data: newRole, error: roleError } = await supabase
           .from("user_roles")
           .insert({
             user_id: firebaseUser.uid,
             role: role,
-          });
+          })
+          .select()
+          .single();
+
+        console.log('Role assignment result:', { newRole, roleError });
 
         if (roleError) {
           console.error("Role assignment error:", roleError);
+          throw roleError;
         }
 
         // Generate referral code
         const referralCodeGenerated = `${role === 'client' ? 'C' : 'D'}${firebaseUser.uid.substring(0, 6).toUpperCase()}`;
-        await supabase.from('profiles').update({
-          referral_code: referralCodeGenerated
-        }).eq('user_id', firebaseUser.uid);
+        const { data: updatedProfile, error: referralError } = await supabase
+          .from('profiles')
+          .update({
+            referral_code: referralCodeGenerated
+          })
+          .eq('user_id', firebaseUser.uid)
+          .select()
+          .single();
+
+        console.log('Referral code result:', { updatedProfile, referralError, referralCodeGenerated });
+
+        if (referralError) {
+          console.error("Referral code error:", referralError);
+        }
 
         // Handle referral if provided
         if (referralCode) {
+          console.log('Processing referral code:', referralCode);
           const { data: referrerProfile } = await supabase
             .from('profiles')
             .select('user_id')

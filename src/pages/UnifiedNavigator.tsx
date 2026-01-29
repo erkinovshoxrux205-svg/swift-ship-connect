@@ -318,22 +318,30 @@ const UnifiedNavigator = () => {
                 setUsingFallbackTiles(true);
                 
                 // Remove current tile layer
-                map.removeLayer(tileLayer);
+                try {
+                  map.removeLayer(tileLayer);
+                } catch (removeErr) {
+                  console.error("[Map Init] Error removing tile layer:", removeErr);
+                }
                 
                 // Add OSM fallback
-                const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                  maxZoom: 19,
-                  attribution: '© OpenStreetMap contributors',
-                });
-                
-                osmLayer.on('load', () => console.log("[Map Init] ✅ OSM fallback tiles loaded!"));
-                osmLayer.addTo(map);
-                
-                toast({
-                  title: "Using OpenStreetMap",
-                  description: "Switched to fallback map tiles",
-                  variant: "default",
-                });
+                try {
+                  const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 19,
+                    attribution: '© OpenStreetMap contributors',
+                  });
+                  
+                  osmLayer.on('load', () => console.log("[Map Init] ✅ OSM fallback tiles loaded!"));
+                  osmLayer.addTo(map);
+                  
+                  toast({
+                    title: "Using OpenStreetMap",
+                    description: "Switched to fallback map tiles due to errors",
+                    variant: "default",
+                  });
+                } catch (osmErr) {
+                  console.error("[Map Init] Error adding OSM fallback:", osmErr);
+                }
               }
             }, 5000);
           });
@@ -391,6 +399,68 @@ const UnifiedNavigator = () => {
           console.log("[Map Init] Tile layer added to map");
 
           L.control.zoom({ position: "bottomright" }).addTo(map);
+
+          // Add 3D effects and enhancements
+          setTimeout(() => {
+            if (mapRef.current) {
+              console.log("[Map Init] Adding 3D enhancements...");
+              
+              // Add 3D building shadows
+              const buildingShadowStyle = `
+                .leaflet-container {
+                  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
+                }
+                
+                .leaflet-marker-icon {
+                  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));
+                  transition: all 0.3s ease;
+                }
+                
+                .leaflet-marker-icon:hover {
+                  filter: drop-shadow(0 4px 8px rgba(59,130,246,0.6));
+                  transform: translateY(-2px);
+                }
+                
+                .leaflet-popup-content-wrapper {
+                  background: linear-gradient(135deg, rgba(59,130,246,0.9) 0%, rgba(147,51,234,0.9) 100%);
+                  backdrop-filter: blur(10px);
+                  border: 1px solid rgba(255,255,255,0.2);
+                  box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+                }
+                
+                .leaflet-popup-content {
+                  color: white;
+                  font-weight: 500;
+                }
+                
+                .leaflet-tile-pane {
+                  filter: brightness(0.9) contrast(1.1);
+                }
+                
+                @keyframes pulse {
+                  0%, 100% { transform: scale(1); opacity: 1; }
+                  50% { transform: scale(1.05); opacity: 0.8; }
+                }
+                
+                .custom-3d-marker {
+                  animation: pulse 2s ease-in-out infinite;
+                }
+              `;
+              
+              const styleElement = document.createElement('style');
+              styleElement.textContent = buildingShadowStyle;
+              document.head.appendChild(styleElement);
+              
+              // Add 3D perspective effect to map container
+              const mapContainer = mapContainerRef.current;
+              if (mapContainer) {
+                mapContainer.style.transform = 'perspective(1000px)';
+                mapContainer.style.transformStyle = 'preserve-3d';
+              }
+              
+              console.log("[Map Init] ✅ 3D enhancements added!");
+            }
+          }, 1000);
 
           // Force multiple invalidateSize calls to ensure tiles render
           console.log("[Map Init] Scheduling map size invalidations...");

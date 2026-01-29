@@ -108,23 +108,38 @@ export const EmailVerificationTimer: React.FC<EmailVerificationTimerProps> = ({
 
   // Resend verification email
   const handleResendEmail = async () => {
-    if (!user) return;
+    if (!user) {
+      toast({
+        title: "❌ Ошибка",
+        description: "Пользователь не найден",
+        variant: "destructive"
+      });
+      return;
+    }
     
     try {
+      console.log('🔄 Attempting to resend verification email to:', user.email);
+      console.log('👤 User UID:', user.uid);
+      console.log('✅ Email verified:', user.emailVerified);
+      
       await firebaseSendEmailVerification(user);
       
       toast({
         title: "📧 Письмо отправлено",
-        description: "Проверьте вашу почту для подтверждения",
+        description: `Проверьте почту ${user.email}`,
       });
       
       // Reset timer
       setTimeLeft(120);
       setIsExpired(false);
-    } catch (error) {
+    } catch (error: any) {
+      console.error('❌ Resend email error:', error);
+      
+      const errorMessage = error.message || "Не удалось отправить письмо повторно";
+      
       toast({
-        title: "Ошибка",
-        description: "Не удалось отправить письмо повторно",
+        title: "❌ Ошибка отправки",
+        description: errorMessage,
         variant: "destructive"
       });
     }

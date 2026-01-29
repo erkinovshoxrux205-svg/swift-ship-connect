@@ -58,10 +58,55 @@ export const firebaseSignInWithGoogle = async (): Promise<UserCredential> => {
 };
 
 export const firebaseSendEmailVerification = async (user: User): Promise<void> => {
-  return await sendEmailVerification(user, {
-    url: `${window.location.origin}/login`,
-    handleCodeInApp: true
-  });
+  try {
+    console.log('📧 Sending email verification to:', user.email);
+    console.log('👤 User UID:', user.uid);
+    console.log('✅ Email verified status:', user.emailVerified);
+    
+    if (!user) {
+      throw new Error('User is null or undefined');
+    }
+    
+    if (user.emailVerified) {
+      console.log('⚠️ Email already verified, skipping verification');
+      return;
+    }
+    
+    const actionCodeSettings = {
+      url: `${window.location.origin}/login`,
+      handleCodeInApp: true
+    };
+    
+    console.log('🔧 Action code settings:', actionCodeSettings);
+    
+    await sendEmailVerification(user, actionCodeSettings);
+    console.log('✅ Email verification sent successfully');
+  } catch (error: any) {
+    console.error('❌ Firebase send email verification error:', error);
+    console.error('❌ Error code:', error.code);
+    console.error('❌ Error message:', error.message);
+    console.error('❌ Error details:', error);
+    
+    // Обработка конкретных ошибок Firebase
+    switch (error.code) {
+      case 'auth/too-many-requests':
+        throw new Error('Слишком много запросов. Попробуйте через несколько минут.');
+      case 'auth/user-not-found':
+        throw new Error('Пользователь не найден. Войдите заново.');
+      case 'auth/invalid-email':
+        throw new Error('Неверный формат email.');
+      case 'auth/user-disabled':
+        throw new Error('Аккаунт отключен.');
+      case 'auth/operation-not-allowed':
+        throw new Error('Операция не разрешена. Проверьте настройки Firebase.');
+      case 'auth/network-request-failed':
+        throw new Error('Проблема с сетью. Проверьте подключение к интернету.');
+      case 'auth/internal-error':
+        throw new Error('Внутренняя ошибка Firebase. Попробуйте позже.');
+      default:
+        throw new Error(`Ошибка отправки: ${error.message || 'Неизвестная ошибка Firebase'}`);
+    }
+  }
 };
 
 export const signOutFromFirebase = async (): Promise<void> => {

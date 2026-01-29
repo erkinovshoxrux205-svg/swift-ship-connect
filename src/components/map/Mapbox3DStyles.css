@@ -1,0 +1,280 @@
+/* Enhanced 3D Map Styles for Showcase */
+
+/* Custom 3D markers */
+.custom-3d-marker {
+  position: relative;
+  transition: all 0.3s ease;
+  z-index: 10;
+}
+
+.custom-3d-marker:hover {
+  z-index: 20;
+}
+
+.marker-3d {
+  animation: float 3s ease-in-out infinite;
+  backdrop-filter: blur(10px);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+.marker-label {
+  animation: fadeIn 0.5s ease;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(10px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* Enhanced popup styles */
+.mapboxgl-popup {
+  z-index: 1000;
+}
+
+.mapboxgl-popup-content {
+  background: transparent !important;
+  padding: 0 !important;
+  border-radius: 12px !important;
+  overflow: hidden !important;
+}
+
+.mapboxgl-popup-tip {
+  display: none !important;
+}
+
+/* Map container enhancements */
+.mapboxgl-map {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.mapboxgl-canvas {
+  border-radius: 12px;
+}
+
+/* Control panel styling */
+.mapboxgl-ctrl-group {
+  background: rgba(0, 0, 0, 0.7) !important;
+  backdrop-filter: blur(10px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 8px !important;
+  overflow: hidden !important;
+}
+
+.mapboxgl-ctrl button {
+  background: transparent !important;
+  border: none !important;
+  color: white !important;
+  transition: all 0.2s ease !important;
+}
+
+.mapboxgl-ctrl button:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+.mapboxgl-ctrl button:focus {
+  outline: 2px solid rgba(59, 130, 246, 0.5) !important;
+  outline-offset: 2px !important;
+}
+
+/* Attribution styling */
+.mapboxgl-ctrl-attrib {
+  background: rgba(0, 0, 0, 0.7) !important;
+  backdrop-filter: blur(10px) !important;
+  color: rgba(255, 255, 255, 0.7) !important;
+  font-size: 11px !important;
+  border-radius: 4px !important;
+  padding: 4px 8px !important;
+}
+
+/* Scale control styling */
+.mapboxgl-ctrl-scale {
+  background: rgba(0, 0, 0, 0.7) !important;
+  backdrop-filter: blur(10px) !important;
+  color: white !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 4px !important;
+  font-size: 12px !important;
+}
+
+/* Loading overlay */
+.map-loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  border-radius: 12px;
+}
+
+.map-loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid rgba(255, 255, 255, 0.1);
+  border-top: 4px solid #3B82F6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Flying indicator */
+.flying-indicator {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 12px 20px;
+  border-radius: 25px;
+  font-size: 14px;
+  font-weight: 500;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  z-index: 100;
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from { transform: translateX(-100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+/* Controls hint */
+.controls-hint {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 16px;
+  border-radius: 12px;
+  font-size: 12px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  z-index: 100;
+  max-width: 250px;
+}
+
+.controls-hint h4 {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.controls-hint div {
+  margin: 4px 0;
+  opacity: 0.9;
+}
+
+/* Route animation */
+.route-line {
+  animation: routeGlow 2s ease-in-out infinite;
+}
+
+@keyframes routeGlow {
+  0%, 100% { opacity: 0.6; filter: brightness(1); }
+  50% { opacity: 1; filter: brightness(1.2); }
+}
+
+/* 3D building enhancement */
+.mapboxgl-buildings {
+  transition: all 0.3s ease;
+}
+
+.mapboxgl-buildings:hover {
+  filter: brightness(1.2);
+}
+
+/* Performance optimizations */
+.mapboxgl-map {
+  will-change: transform;
+}
+
+.mapboxgl-canvas {
+  will-change: transform;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .mapboxgl-ctrl-group {
+    transform: scale(0.9);
+  }
+  
+  .flying-indicator {
+    top: 10px;
+    left: 10px;
+    font-size: 12px;
+    padding: 8px 16px;
+  }
+  
+  .controls-hint {
+    bottom: 10px;
+    left: 10px;
+    font-size: 11px;
+    padding: 12px;
+  }
+}
+
+/* High DPI displays */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .mapboxgl-canvas {
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+  }
+}
+
+/* Dark theme enhancements */
+.mapboxgl-map {
+  background: #0f0f23;
+}
+
+/* Custom cursor for interactive elements */
+.mapboxgl-interactive {
+  cursor: grab;
+}
+
+.mapboxgl-interactive:active {
+  cursor: grabbing;
+}
+
+/* Smooth transitions for all map movements */
+.mapboxgl-map {
+  transition: all 0.3s ease;
+}
+
+/* Enhanced visual effects */
+.map-glow {
+  box-shadow: 0 0 50px rgba(59, 130, 246, 0.3);
+}
+
+.map-reflection {
+  position: relative;
+}
+
+.map-reflection::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 50%);
+  pointer-events: none;
+  border-radius: 12px;
+}
