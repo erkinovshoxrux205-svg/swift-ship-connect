@@ -25,11 +25,13 @@ export const Header = () => {
         <div className="flex items-center justify-between h-16 lg:h-18">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-3 group">
-            <div className="w-10 h-10 gradient-hero rounded-xl flex items-center justify-center transition-transform duration-300 group-hover:scale-105 shadow-sm">
-              <Truck className="w-5 h-5 text-white" />
-            </div>
+            <img 
+              src="/logo.png" 
+              alt="Asloguz" 
+              className="w-10 h-10 rounded-lg transition-transform duration-300 group-hover:scale-105 shadow-sm"
+            />
             <span className="text-xl font-bold tracking-tight">
-              Asia<span className="text-primary">Log</span>
+              Asloguz
             </span>
           </Link>
 

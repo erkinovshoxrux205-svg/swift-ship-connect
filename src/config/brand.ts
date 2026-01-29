@@ -1,21 +1,48 @@
 // Centralized Brand Configuration
 // All branding constants in one place for easy updates
 
-export const BRAND = {
+export const BRAND_CONFIG = {
   // Company Information
-  name: "AsLogUz",
-  fullName: "AsLogUz Global Logistics", 
-  tagline: "Enterprise Logistics Platform",
+  name: "Asloguz",
+  fullName: "Asloguz Logistics",
+  tagline: "Professional Logistics Solutions",
+  description: "Complete logistics management platform for modern businesses",
+  version: "2.0.0",
   
   // URLs & Assets
   logo: "/logo.png", // Served from public folder
   logoAlt: "src/assets/logo.png", // ES6 import version
   favicon: "/logo.png",
   
+  // URLs
+  website: "https://asloguz.com",
+  support: "mailto:support@asloguz.com",
+  
+  // Social media
+  social: {
+    facebook: "https://facebook.com/asloguz",
+    twitter: "https://twitter.com/asloguz",
+    linkedin: "https://linkedin.com/company/asloguz",
+    instagram: "https://instagram.com/asloguz",
+    telegram: "https://t.me/asloguz",
+  },
+  
   // Contact
-  website: "https://asloguz.uz",
-  email: "info@asloguz.uz",
-  phone: "+998 71 200 00 00",
+  contact: {
+    phone: "+998 90 123 45 67",
+    email: "info@asloguz.com",
+    address: "Tashkent, Uzbekistan"
+  },
+  
+  // Features
+  features: [
+    "Real-time tracking",
+    "Route optimization", 
+    "Document management",
+    "Multi-language support",
+    "Mobile friendly",
+    "Secure payments"
+  ],
   
   // Theme Colors (HSL values for CSS)
   colors: {
@@ -26,11 +53,11 @@ export const BRAND = {
     client: "217 91% 60%", // Blue for clients
   },
   
-  // Social Links
-  social: {
-    telegram: "https://t.me/asloguz",
-    instagram: "https://instagram.com/asloguz",
-    facebook: "https://facebook.com/asloguz",
+  // Currency
+  currency: {
+    code: "UZS",
+    symbol: "сум",
+    locale: "uz-UZ"
   },
   
   // Regions
@@ -46,4 +73,4 @@ export const BRAND = {
   copyright: `© ${new Date().getFullYear()} AsLogUz. Все права защищены.`,
 } as const;
 
-export type BrandConfig = typeof BRAND;
+export type BrandConfig = typeof BRAND_CONFIG;

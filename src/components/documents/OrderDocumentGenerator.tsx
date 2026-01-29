@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { formatUZS } from '@/lib/currency';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -232,7 +233,7 @@ export const OrderDocumentGenerator: React.FC<{
           yPosition += 6;
         }
         if (orderData.cargo.value) {
-          pdf.text(`Declared Value: ${orderData.cargo.value} ${orderData.pricing.currency}`, 20, yPosition);
+          pdf.text(`Declared Value: ${formatUZS(orderData.cargo.value)}`, 20, yPosition);
           yPosition += 6;
         }
         yPosition += 10;
@@ -265,11 +266,11 @@ export const OrderDocumentGenerator: React.FC<{
         yPosition += 10;
 
         const pricingData = [
-          ['Base Price', `${orderData.pricing.basePrice.toFixed(2)} ${orderData.pricing.currency}`],
-          ['Fuel Surcharge', `${orderData.pricing.fuelSurcharge.toFixed(2)} ${orderData.pricing.currency}`],
-          ['Tolls', `${orderData.pricing.tolls.toFixed(2)} ${orderData.pricing.currency}`],
-          ['Additional Services', `${orderData.pricing.additionalServices.toFixed(2)} ${orderData.pricing.currency}`],
-          ['TOTAL', `${orderData.pricing.total.toFixed(2)} ${orderData.pricing.currency}`]
+          ['Base Price', formatUZS(orderData.pricing.basePrice)],
+          ['Fuel Surcharge', formatUZS(orderData.pricing.fuelSurcharge)],
+          ['Tolls', formatUZS(orderData.pricing.tolls)],
+          ['Additional Services', formatUZS(orderData.pricing.additionalServices)],
+          ['TOTAL', formatUZS(orderData.pricing.total)]
         ];
 
         autoTable(pdf, {
@@ -340,7 +341,7 @@ export const OrderDocumentGenerator: React.FC<{
       // Footer
       pdf.setFontSize(8);
       pdf.setFont('helvetica', 'italic');
-      pdf.text(`Generated on ${new Date().toLocaleString()} | Swift Ship Connect Logistics`, pageWidth / 2, pdf.internal.pageSize.getHeight() - 10, { align: 'center' });
+      pdf.text(`Generated on ${new Date().toLocaleString()} | Asloguz Logistics`, pageWidth / 2, pdf.internal.pageSize.getHeight() - 10, { align: 'center' });
 
       // Save the PDF
       const pdfBlob = pdf.output('blob');

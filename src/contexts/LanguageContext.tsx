@@ -245,9 +245,9 @@ const translations: Record<Language, Record<string, string>> = {
     
     // Landing Page
     "landing.hero.badge": "Логистика Центральной Азии",
-    "landing.hero.title": "Грузоперевозки",
-    "landing.hero.titleHighlight": "нового поколения",
-    "landing.hero.subtitle": "Соединяем клиентов, водителей и логистические компании в Узбекистане, Казахстане, Кыргызстане, Таджикистане и Туркменистане",
+    "landing.hero.title": "Asloguz",
+    "landing.hero.titleHighlight": "Профессиональная логистика",
+    "landing.hero.subtitle": "Полная платформа управления логистикой для современного бизнеса в Узбекистане, Казахстане, Кыргызстане, Таджикистане и Туркменистане",
     "landing.hero.cta": "Начать бесплатно",
     "landing.hero.demo": "Смотреть демо",
     "landing.hero.deliveries": "Перевозок",
@@ -815,9 +815,9 @@ const translations: Record<Language, Record<string, string>> = {
     
     // Landing Page
     "landing.hero.badge": "Markaziy Osiyo logistikasi",
-    "landing.hero.title": "Yuk tashish",
-    "landing.hero.titleHighlight": "yangi avlodi",
-    "landing.hero.subtitle": "O'zbekiston, Qozog'iston, Qirg'iziston, Tojikiston va Turkmanistonda mijozlar, haydovchilar va logistika kompaniyalarini bog'laymiz",
+    "landing.hero.title": "Asloguz",
+    "landing.hero.titleHighlight": "Professional logistika",
+    "landing.hero.subtitle": "Zamonaviy biznes uchun to'liq logistika boshqaruv platformasi O'zbekiston, Qozog'iston, Qirg'iziston, Tojikiston va Turkmanistonda",
     "landing.hero.cta": "Bepul boshlash",
     "landing.hero.demo": "Demoni ko'rish",
     "landing.hero.deliveries": "Yetkazmalar",
@@ -1385,9 +1385,9 @@ const translations: Record<Language, Record<string, string>> = {
     
     // Landing Page
     "landing.hero.badge": "Central Asia Logistics",
-    "landing.hero.title": "Freight Transport",
-    "landing.hero.titleHighlight": "Next Generation",
-    "landing.hero.subtitle": "Connecting clients, drivers and logistics companies in Uzbekistan, Kazakhstan, Kyrgyzstan, Tajikistan and Turkmenistan",
+    "landing.hero.title": "Asloguz",
+    "landing.hero.titleHighlight": "Professional Logistics",
+    "landing.hero.subtitle": "Complete logistics management platform for modern businesses in Uzbekistan, Kazakhstan, Kyrgyzstan, Tajikistan and Turkmenistan",
     "landing.hero.cta": "Get Started Free",
     "landing.hero.demo": "Watch Demo",
     "landing.hero.deliveries": "Deliveries",

@@ -48,7 +48,7 @@ export const EmailVerificationTimer: React.FC<EmailVerificationTimerProps> = ({
         setShowSuccessAnimation(true);
         toast({
           title: "🎉 Email подтверждён!",
-          description: "Добро пожаловать в Swift Ship Connect!",
+          description: "Добро пожаловать в Asloguz!",
         });
         
         // Show success animation for 2 seconds, then redirect
@@ -185,7 +185,7 @@ export const EmailVerificationTimer: React.FC<EmailVerificationTimerProps> = ({
             isVerified && "text-green-600/80"
           )}>
             {isVerified 
-              ? "Добро пожаловать в Swift Ship Connect!"
+              ? "Добро пожаловать в Asloguz!"
               : isExpired 
                 ? "Регистрация отменена" 
                 : `Письмо отправлено на <strong>${email}</strong>`
