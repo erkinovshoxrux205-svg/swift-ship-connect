@@ -7,6 +7,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { MAPBOX_CONFIG } from "@/config/mapbox";
 
 interface OpenInGoogleMapsButtonProps {
   origin?: string;
@@ -18,6 +19,7 @@ interface OpenInGoogleMapsButtonProps {
 
 const translations = {
   openExternal: "Открыть в...",
+  mapbox: "Mapbox",
   googleMaps: "Google Maps",
   yandexMaps: "Яндекс Карты",
   twoGIS: "2ГИС",
@@ -31,6 +33,31 @@ export const OpenInGoogleMapsButton = forwardRef<HTMLButtonElement, OpenInGoogle
   waypoints = [],
   className,
 }, ref) => {
+  // Mapbox URL
+  const openMapbox = () => {
+    const baseUrl = "https://api.mapbox.com/directions/v5/mapbox/driving/";
+    let coordinates = "";
+    
+    if (origin) {
+      coordinates = `${encodeURIComponent(origin)};${encodeURIComponent(destination)}`;
+    } else {
+      coordinates = encodeURIComponent(destination);
+    }
+    
+    // Add waypoints if any
+    if (waypoints.length > 0) {
+      coordinates = origin 
+        ? `${encodeURIComponent(origin)};${waypoints.map(w => encodeURIComponent(w)).join(';')};${encodeURIComponent(destination)}`
+        : `${waypoints.map(w => encodeURIComponent(w)).join(';')};${encodeURIComponent(destination)}`;
+    }
+    
+    const url = `${baseUrl}${coordinates}?access_token=${MAPBOX_CONFIG.accessToken}&overview=full&geometries=geojson`;
+    
+    // Open Mapbox in a new window with the route
+    const mapboxUrl = `https://www.mapbox.com/directions/${coordinates}?access_token=${MAPBOX_CONFIG.accessToken}`;
+    window.open(mapboxUrl, "_blank", "noopener,noreferrer");
+  };
+
   // Convert travel mode to Google Maps format
   const getGoogleTravelMode = (): string => {
     switch (travelMode) {
@@ -125,6 +152,10 @@ export const OpenInGoogleMapsButton = forwardRef<HTMLButtonElement, OpenInGoogle
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="bg-background border shadow-lg z-50" align="end">
+        <DropdownMenuItem onClick={openMapbox} className="cursor-pointer">
+          <Navigation className="h-4 w-4 mr-2 text-blue-600" />
+          {translations.mapbox}
+        </DropdownMenuItem>
         <DropdownMenuItem onClick={openGoogleMaps} className="cursor-pointer">
           <Navigation className="h-4 w-4 mr-2 text-blue-500" />
           {translations.googleMaps}
