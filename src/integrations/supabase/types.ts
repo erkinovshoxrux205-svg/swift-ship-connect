@@ -2224,6 +2224,39 @@ export type Database = {
         }
         Relationships: []
       }
+      telegram_verifications: {
+        Row: {
+          attempts: number
+          code_hash: string
+          created_at: string
+          expires_at: string
+          id: string
+          phone: string
+          telegram_id: number | null
+          verified: boolean
+        }
+        Insert: {
+          attempts?: number
+          code_hash: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          phone: string
+          telegram_id?: number | null
+          verified?: boolean
+        }
+        Update: {
+          attempts?: number
+          code_hash?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          phone?: string
+          telegram_id?: number | null
+          verified?: boolean
+        }
+        Relationships: []
+      }
       transactions: {
         Row: {
           amount: number
