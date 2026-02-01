@@ -71,6 +71,7 @@ export type Database = {
       ai_conversations: {
         Row: {
           created_at: string
+          firebase_uid: string | null
           id: string
           messages: Json
           updated_at: string
@@ -78,6 +79,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          firebase_uid?: string | null
           id?: string
           messages?: Json
           updated_at?: string
@@ -85,6 +87,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          firebase_uid?: string | null
           id?: string
           messages?: Json
           updated_at?: string
@@ -167,6 +170,39 @@ export type Database = {
           status?: string | null
           type?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      barcodes: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          is_active: boolean | null
+          reference_id: string
+          reference_type: string
+          type: Database["public"]["Enums"]["barcode_type"]
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          reference_id: string
+          reference_type: string
+          type: Database["public"]["Enums"]["barcode_type"]
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          reference_id?: string
+          reference_type?: string
+          type?: Database["public"]["Enums"]["barcode_type"]
+          updated_at?: string
         }
         Relationships: []
       }
@@ -298,6 +334,213 @@ export type Database = {
         }
         Relationships: []
       }
+      document_items: {
+        Row: {
+          created_at: string
+          description: string | null
+          document_id: string
+          id: string
+          item_sequence: number
+          product_id: string | null
+          product_name: string
+          product_sku: string | null
+          quantity: number
+          total_price: number | null
+          unit_price: number | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          document_id: string
+          id?: string
+          item_sequence: number
+          product_id?: string | null
+          product_name: string
+          product_sku?: string | null
+          quantity: number
+          total_price?: number | null
+          unit_price?: number | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          document_id?: string
+          id?: string
+          item_sequence?: number
+          product_id?: string | null
+          product_name?: string
+          product_sku?: string | null
+          quantity?: number
+          total_price?: number | null
+          unit_price?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_items_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      document_signatures: {
+        Row: {
+          document_id: string
+          id: string
+          ip_address: unknown
+          signature_data: Json | null
+          signature_type: string
+          signed_at: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          document_id: string
+          id?: string
+          ip_address?: unknown
+          signature_data?: Json | null
+          signature_type: string
+          signed_at?: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          document_id?: string
+          id?: string
+          ip_address?: unknown
+          signature_data?: Json | null
+          signature_type?: string
+          signed_at?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_signatures_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      documents: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          content: Json | null
+          created_at: string
+          created_by: string
+          deal_id: string | null
+          description: string | null
+          document_number: string
+          document_type: Database["public"]["Enums"]["document_type"]
+          file_hash: string | null
+          file_path: string | null
+          file_size: number | null
+          id: string
+          metadata: Json | null
+          order_id: string | null
+          status: Database["public"]["Enums"]["document_status"]
+          title: string
+          updated_at: string
+          warehouse_id: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          content?: Json | null
+          created_at?: string
+          created_by: string
+          deal_id?: string | null
+          description?: string | null
+          document_number: string
+          document_type: Database["public"]["Enums"]["document_type"]
+          file_hash?: string | null
+          file_path?: string | null
+          file_size?: number | null
+          id?: string
+          metadata?: Json | null
+          order_id?: string | null
+          status?: Database["public"]["Enums"]["document_status"]
+          title: string
+          updated_at?: string
+          warehouse_id?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          content?: Json | null
+          created_at?: string
+          created_by?: string
+          deal_id?: string | null
+          description?: string | null
+          document_number?: string
+          document_type?: Database["public"]["Enums"]["document_type"]
+          file_hash?: string | null
+          file_path?: string | null
+          file_size?: number | null
+          id?: string
+          metadata?: Json | null
+          order_id?: string | null
+          status?: Database["public"]["Enums"]["document_status"]
+          title?: string
+          updated_at?: string
+          warehouse_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documents_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      escrow_operations: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          status: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          status: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          status?: string
+        }
+        Relationships: []
+      }
       favorite_carriers: {
         Row: {
           carrier_id: string
@@ -413,6 +656,124 @@ export type Database = {
             columns: ["deal_id"]
             isOneToOne: false
             referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory: {
+        Row: {
+          batch_number: string | null
+          created_at: string
+          expiry_date: string | null
+          id: string
+          location_id: string
+          product_id: string
+          stock_available: number | null
+          stock_reserved: number | null
+          stock_total: number | null
+          updated_at: string
+        }
+        Insert: {
+          batch_number?: string | null
+          created_at?: string
+          expiry_date?: string | null
+          id?: string
+          location_id: string
+          product_id: string
+          stock_available?: number | null
+          stock_reserved?: number | null
+          stock_total?: number | null
+          updated_at?: string
+        }
+        Update: {
+          batch_number?: string | null
+          created_at?: string
+          expiry_date?: string | null
+          id?: string
+          location_id?: string
+          product_id?: string
+          stock_available?: number | null
+          stock_reserved?: number | null
+          stock_total?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_movements: {
+        Row: {
+          created_at: string
+          from_location_id: string | null
+          id: string
+          movement_type: Database["public"]["Enums"]["movement_type"]
+          notes: string | null
+          product_id: string | null
+          quantity: number
+          reference_id: string | null
+          reference_type: string | null
+          to_location_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          from_location_id?: string | null
+          id?: string
+          movement_type: Database["public"]["Enums"]["movement_type"]
+          notes?: string | null
+          product_id?: string | null
+          quantity: number
+          reference_id?: string | null
+          reference_type?: string | null
+          to_location_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          from_location_id?: string | null
+          id?: string
+          movement_type?: Database["public"]["Enums"]["movement_type"]
+          notes?: string | null
+          product_id?: string | null
+          quantity?: number
+          reference_id?: string | null
+          reference_type?: string | null
+          to_location_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_movements_from_location_id_fkey"
+            columns: ["from_location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_movements_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_movements_to_location_id_fkey"
+            columns: ["to_location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
             referencedColumns: ["id"]
           },
         ]
@@ -536,6 +897,62 @@ export type Database = {
           video_selfie_url?: string | null
         }
         Relationships: []
+      }
+      locations: {
+        Row: {
+          cell: string | null
+          code: string
+          created_at: string
+          current_volume: number | null
+          current_weight: number | null
+          id: string
+          max_volume: number | null
+          max_weight: number | null
+          rack: string | null
+          shelf: string | null
+          status: Database["public"]["Enums"]["location_status"]
+          updated_at: string
+          zone_id: string
+        }
+        Insert: {
+          cell?: string | null
+          code: string
+          created_at?: string
+          current_volume?: number | null
+          current_weight?: number | null
+          id?: string
+          max_volume?: number | null
+          max_weight?: number | null
+          rack?: string | null
+          shelf?: string | null
+          status?: Database["public"]["Enums"]["location_status"]
+          updated_at?: string
+          zone_id: string
+        }
+        Update: {
+          cell?: string | null
+          code?: string
+          created_at?: string
+          current_volume?: number | null
+          current_weight?: number | null
+          id?: string
+          max_volume?: number | null
+          max_weight?: number | null
+          rack?: string | null
+          shelf?: string | null
+          status?: Database["public"]["Enums"]["location_status"]
+          updated_at?: string
+          zone_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "locations_zone_id_fkey"
+            columns: ["zone_id"]
+            isOneToOne: false
+            referencedRelation: "zones"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       loyalty_points: {
         Row: {
@@ -676,6 +1093,7 @@ export type Database = {
         Row: {
           body: string
           created_at: string
+          firebase_uid: string | null
           id: string
           is_read: boolean
           title: string
@@ -686,6 +1104,7 @@ export type Database = {
         Insert: {
           body: string
           created_at?: string
+          firebase_uid?: string | null
           id?: string
           is_read?: boolean
           title: string
@@ -696,6 +1115,7 @@ export type Database = {
         Update: {
           body?: string
           created_at?: string
+          firebase_uid?: string | null
           id?: string
           is_read?: boolean
           title?: string
@@ -929,6 +1349,99 @@ export type Database = {
         }
         Relationships: []
       }
+      payments: {
+        Row: {
+          amount: number
+          card_number: string
+          created_at: string | null
+          id: string
+          notes: string | null
+          payment_method: string | null
+          plan_id: string
+          plan_name: string
+          processed_at: string | null
+          processed_by: string | null
+          status: string
+          transaction_id: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          card_number: string
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          plan_id: string
+          plan_name: string
+          processed_at?: string | null
+          processed_by?: string | null
+          status?: string
+          transaction_id: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          card_number?: string
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          plan_id?: string
+          plan_name?: string
+          processed_at?: string | null
+          processed_by?: string | null
+          status?: string
+          transaction_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      platform_income: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          source: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          source: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          source?: string
+        }
+        Relationships: []
+      }
+      platform_settings: {
+        Row: {
+          created_at: string
+          id: string
+          key: string
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          key: string
+          updated_at?: string
+          value: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          key?: string
+          updated_at?: string
+          value?: string
+        }
+        Relationships: []
+      }
       price_negotiations: {
         Row: {
           created_at: string
@@ -977,9 +1490,62 @@ export type Database = {
           },
         ]
       }
+      products: {
+        Row: {
+          barcode: string | null
+          category: string | null
+          created_at: string
+          description: string | null
+          height: number | null
+          id: string
+          length: number | null
+          min_stock_level: number | null
+          name: string
+          qr_code: string | null
+          sku: string
+          updated_at: string
+          weight: number | null
+          width: number | null
+        }
+        Insert: {
+          barcode?: string | null
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          height?: number | null
+          id?: string
+          length?: number | null
+          min_stock_level?: number | null
+          name: string
+          qr_code?: string | null
+          sku: string
+          updated_at?: string
+          weight?: number | null
+          width?: number | null
+        }
+        Update: {
+          barcode?: string | null
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          height?: number | null
+          id?: string
+          length?: number | null
+          min_stock_level?: number | null
+          name?: string
+          qr_code?: string | null
+          sku?: string
+          updated_at?: string
+          weight?: number | null
+          width?: number | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
+          account_status: string | null
           address: string | null
+          auth_method: string | null
           avatar_url: string | null
           balance: number | null
           carrier_type: Database["public"]["Enums"]["carrier_type"] | null
@@ -987,13 +1553,16 @@ export type Database = {
           created_at: string
           date_of_birth: string | null
           device_fingerprint: string | null
+          email: string | null
           email_verified: boolean | null
           firebase_uid: string | null
           fraud_score: number | null
+          frozen_balance: number | null
           full_name: string | null
           id: string
           is_verified: boolean | null
           last_ip: string | null
+          last_login_at: string | null
           locked_until: string | null
           login_attempts: number | null
           passport_number_hash: string | null
@@ -1001,13 +1570,20 @@ export type Database = {
           phone: string | null
           phone_verified: boolean | null
           referral_code: string | null
+          role: string | null
           subscription_plan: string | null
+          telegram_id: number | null
+          telegram_username: string | null
+          telegram_verified: boolean | null
+          telegram_verified_at: string | null
           updated_at: string
           user_id: string
           vehicle_type: string | null
         }
         Insert: {
+          account_status?: string | null
           address?: string | null
+          auth_method?: string | null
           avatar_url?: string | null
           balance?: number | null
           carrier_type?: Database["public"]["Enums"]["carrier_type"] | null
@@ -1015,13 +1591,16 @@ export type Database = {
           created_at?: string
           date_of_birth?: string | null
           device_fingerprint?: string | null
+          email?: string | null
           email_verified?: boolean | null
           firebase_uid?: string | null
           fraud_score?: number | null
+          frozen_balance?: number | null
           full_name?: string | null
           id?: string
           is_verified?: boolean | null
           last_ip?: string | null
+          last_login_at?: string | null
           locked_until?: string | null
           login_attempts?: number | null
           passport_number_hash?: string | null
@@ -1029,13 +1608,20 @@ export type Database = {
           phone?: string | null
           phone_verified?: boolean | null
           referral_code?: string | null
+          role?: string | null
           subscription_plan?: string | null
+          telegram_id?: number | null
+          telegram_username?: string | null
+          telegram_verified?: boolean | null
+          telegram_verified_at?: string | null
           updated_at?: string
           user_id: string
           vehicle_type?: string | null
         }
         Update: {
+          account_status?: string | null
           address?: string | null
+          auth_method?: string | null
           avatar_url?: string | null
           balance?: number | null
           carrier_type?: Database["public"]["Enums"]["carrier_type"] | null
@@ -1043,13 +1629,16 @@ export type Database = {
           created_at?: string
           date_of_birth?: string | null
           device_fingerprint?: string | null
+          email?: string | null
           email_verified?: boolean | null
           firebase_uid?: string | null
           fraud_score?: number | null
+          frozen_balance?: number | null
           full_name?: string | null
           id?: string
           is_verified?: boolean | null
           last_ip?: string | null
+          last_login_at?: string | null
           locked_until?: string | null
           login_attempts?: number | null
           passport_number_hash?: string | null
@@ -1057,7 +1646,12 @@ export type Database = {
           phone?: string | null
           phone_verified?: boolean | null
           referral_code?: string | null
+          role?: string | null
           subscription_plan?: string | null
+          telegram_id?: number | null
+          telegram_username?: string | null
+          telegram_verified?: boolean | null
+          telegram_verified_at?: string | null
           updated_at?: string
           user_id?: string
           vehicle_type?: string | null
@@ -1136,13 +1730,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "promo_usages_order_id_fkey"
-            columns: ["order_id"]
-            isOneToOne: false
-            referencedRelation: "orders"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "promo_usages_promo_code_id_fkey"
             columns: ["promo_code_id"]
             isOneToOne: false
@@ -1212,6 +1799,80 @@ export type Database = {
             columns: ["deal_id"]
             isOneToOne: false
             referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      receiving: {
+        Row: {
+          created_at: string
+          id: string
+          location_id: string | null
+          notes: string | null
+          order_id: string | null
+          product_id: string | null
+          quantity_expected: number
+          quantity_received: number | null
+          received_by: string | null
+          status: string
+          updated_at: string
+          warehouse_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          location_id?: string | null
+          notes?: string | null
+          order_id?: string | null
+          product_id?: string | null
+          quantity_expected: number
+          quantity_received?: number | null
+          received_by?: string | null
+          status?: string
+          updated_at?: string
+          warehouse_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          location_id?: string | null
+          notes?: string | null
+          order_id?: string | null
+          product_id?: string | null
+          quantity_expected?: number
+          quantity_received?: number | null
+          received_by?: string | null
+          status?: string
+          updated_at?: string
+          warehouse_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "receiving_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "receiving_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "receiving_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "receiving_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
             referencedColumns: ["id"]
           },
         ]
@@ -1337,15 +1998,7 @@ export type Database = {
           order_id?: string
           price?: number
         }
-        Relationships: [
-          {
-            foreignKeyName: "responses_order_id_fkey"
-            columns: ["order_id"]
-            isOneToOne: false
-            referencedRelation: "orders"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       security_events: {
         Row: {
@@ -1385,6 +2038,83 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      shipping: {
+        Row: {
+          created_at: string
+          deal_id: string | null
+          id: string
+          location_id: string | null
+          notes: string | null
+          picked_by: string | null
+          product_id: string | null
+          quantity_picked: number | null
+          quantity_requested: number
+          quantity_shipped: number | null
+          status: string
+          updated_at: string
+          warehouse_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          deal_id?: string | null
+          id?: string
+          location_id?: string | null
+          notes?: string | null
+          picked_by?: string | null
+          product_id?: string | null
+          quantity_picked?: number | null
+          quantity_requested: number
+          quantity_shipped?: number | null
+          status?: string
+          updated_at?: string
+          warehouse_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          deal_id?: string | null
+          id?: string
+          location_id?: string | null
+          notes?: string | null
+          picked_by?: string | null
+          product_id?: string | null
+          quantity_picked?: number | null
+          quantity_requested?: number
+          quantity_shipped?: number | null
+          status?: string
+          updated_at?: string
+          warehouse_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shipping_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shipping_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shipping_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shipping_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       subscription_plans: {
         Row: {
@@ -1428,6 +2158,33 @@ export type Database = {
         }
         Relationships: []
       }
+      telegram_codes: {
+        Row: {
+          code: string
+          created_at: string
+          expires_at: string
+          id: string
+          phone: string
+          used_at: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          phone: string
+          used_at?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          phone?: string
+          used_at?: string | null
+        }
+        Relationships: []
+      }
       telegram_users: {
         Row: {
           created_at: string | null
@@ -1467,21 +2224,51 @@ export type Database = {
         }
         Relationships: []
       }
+      transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          status: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
+          auth_method: string | null
           created_at: string
+          firebase_uid: string | null
           id: string
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Insert: {
+          auth_method?: string | null
           created_at?: string
+          firebase_uid?: string | null
           id?: string
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Update: {
+          auth_method?: string | null
           created_at?: string
+          firebase_uid?: string | null
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
@@ -1538,11 +2325,126 @@ export type Database = {
           },
         ]
       }
+      users: {
+        Row: {
+          created_at: string | null
+          email: string | null
+          full_name: string | null
+          id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      warehouses: {
+        Row: {
+          address: string
+          city: string | null
+          code: string
+          country: string | null
+          created_at: string
+          id: string
+          manager_id: string | null
+          name: string
+          status: Database["public"]["Enums"]["warehouse_status"]
+          total_area: number | null
+          updated_at: string
+        }
+        Insert: {
+          address: string
+          city?: string | null
+          code: string
+          country?: string | null
+          created_at?: string
+          id?: string
+          manager_id?: string | null
+          name: string
+          status?: Database["public"]["Enums"]["warehouse_status"]
+          total_area?: number | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string
+          city?: string | null
+          code?: string
+          country?: string | null
+          created_at?: string
+          id?: string
+          manager_id?: string | null
+          name?: string
+          status?: Database["public"]["Enums"]["warehouse_status"]
+          total_area?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      zones: {
+        Row: {
+          capacity: number | null
+          code: string
+          created_at: string
+          id: string
+          name: string
+          status: Database["public"]["Enums"]["zone_status"]
+          updated_at: string
+          warehouse_id: string
+          zone_type: string
+        }
+        Insert: {
+          capacity?: number | null
+          code: string
+          created_at?: string
+          id?: string
+          name: string
+          status?: Database["public"]["Enums"]["zone_status"]
+          updated_at?: string
+          warehouse_id: string
+          zone_type: string
+        }
+        Update: {
+          capacity?: number | null
+          code?: string
+          created_at?: string
+          id?: string
+          name?: string
+          status?: Database["public"]["Enums"]["zone_status"]
+          updated_at?: string
+          warehouse_id?: string
+          zone_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "zones_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      cleanup_expired_codes: { Args: never; Returns: undefined }
+      generate_document_number: {
+        Args: { _type: Database["public"]["Enums"]["document_type"] }
+        Returns: string
+      }
       get_admin_role: {
         Args: { p_user_id: string }
         Returns: Database["public"]["Enums"]["admin_role"]
@@ -1551,8 +2453,25 @@ export type Database = {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
       }
+      get_user_role_text: {
+        Args: { _user_id: string }
+        Returns: Database["public"]["Enums"]["app_role"]
+      }
+      get_warehouse_by_location: {
+        Args: { _location_id: string }
+        Returns: {
+          warehouse_id: string
+          warehouse_name: string
+          zone_id: string
+          zone_name: string
+        }[]
+      }
       has_admin_permission: {
         Args: { p_permission: string; p_user_id: string }
+        Returns: boolean
+      }
+      has_document_access: {
+        Args: { _document_id: string; _user_id: string }
         Returns: boolean
       }
       has_role: {
@@ -1560,6 +2479,17 @@ export type Database = {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      has_role_text: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      has_wms_role: {
+        Args: { _required_role: string; _user_id: string }
         Returns: boolean
       }
       log_audit_event: {
@@ -1575,10 +2505,26 @@ export type Database = {
         }
         Returns: string
       }
+      update_inventory_after_movement: {
+        Args: {
+          _from_location_id: string
+          _movement_type: Database["public"]["Enums"]["movement_type"]
+          _product_id: string
+          _quantity: number
+          _to_location_id: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       admin_role: "super_admin" | "manager" | "operator" | "auditor"
-      app_role: "client" | "carrier" | "admin"
+      app_role:
+        | "client"
+        | "carrier"
+        | "admin"
+        | "warehouse_manager"
+        | "storekeeper"
+      barcode_type: "product" | "location" | "pallet" | "package"
       carrier_type: "driver" | "company"
       deal_status:
         | "pending"
@@ -1586,18 +2532,32 @@ export type Database = {
         | "in_transit"
         | "delivered"
         | "cancelled"
+      document_status: "draft" | "pending" | "approved" | "final" | "cancelled"
+      document_type:
+        | "order_confirmation"
+        | "shipping_manifest"
+        | "receiving_report"
+        | "inventory_report"
+        | "warehouse_receipt"
+        | "delivery_note"
+        | "invoice"
+        | "customs_declaration"
       kyc_status:
         | "not_started"
         | "pending"
         | "verified"
         | "rejected"
         | "manual_review"
+      location_status: "available" | "occupied" | "reserved" | "blocked"
+      movement_type: "inbound" | "outbound" | "transfer" | "adjustment"
       order_status: "open" | "in_progress" | "completed" | "cancelled"
       registration_status:
         | "pending"
         | "approved"
         | "rejected"
         | "resubmission_required"
+      warehouse_status: "active" | "inactive" | "maintenance"
+      zone_status: "active" | "inactive" | "full"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1726,7 +2686,14 @@ export const Constants = {
   public: {
     Enums: {
       admin_role: ["super_admin", "manager", "operator", "auditor"],
-      app_role: ["client", "carrier", "admin"],
+      app_role: [
+        "client",
+        "carrier",
+        "admin",
+        "warehouse_manager",
+        "storekeeper",
+      ],
+      barcode_type: ["product", "location", "pallet", "package"],
       carrier_type: ["driver", "company"],
       deal_status: [
         "pending",
@@ -1735,6 +2702,17 @@ export const Constants = {
         "delivered",
         "cancelled",
       ],
+      document_status: ["draft", "pending", "approved", "final", "cancelled"],
+      document_type: [
+        "order_confirmation",
+        "shipping_manifest",
+        "receiving_report",
+        "inventory_report",
+        "warehouse_receipt",
+        "delivery_note",
+        "invoice",
+        "customs_declaration",
+      ],
       kyc_status: [
         "not_started",
         "pending",
@@ -1742,6 +2720,8 @@ export const Constants = {
         "rejected",
         "manual_review",
       ],
+      location_status: ["available", "occupied", "reserved", "blocked"],
+      movement_type: ["inbound", "outbound", "transfer", "adjustment"],
       order_status: ["open", "in_progress", "completed", "cancelled"],
       registration_status: [
         "pending",
@@ -1749,6 +2729,8 @@ export const Constants = {
         "rejected",
         "resubmission_required",
       ],
+      warehouse_status: ["active", "inactive", "maintenance"],
+      zone_status: ["active", "inactive", "full"],
     },
   },
 } as const

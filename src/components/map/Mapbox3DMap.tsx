@@ -189,13 +189,19 @@ export const Mapbox3DMap: React.FC<Mapbox3DMapProps> = ({
 
         // Add hover effect
         markerElement.addEventListener('mouseenter', () => {
-          markerElement.querySelector('.marker-3d')!.style.transform = 'scale(1.1)';
-          markerElement.querySelector('.marker-3d')!.style.boxShadow = '0 6px 30px rgba(59,130,246,0.5)';
+          const marker3d = markerElement.querySelector('.marker-3d') as HTMLElement | null;
+          if (marker3d) {
+            marker3d.style.transform = 'scale(1.1)';
+            marker3d.style.boxShadow = '0 6px 30px rgba(59,130,246,0.5)';
+          }
         });
 
         markerElement.addEventListener('mouseleave', () => {
-          markerElement.querySelector('.marker-3d')!.style.transform = 'scale(1)';
-          markerElement.querySelector('.marker-3d')!.style.boxShadow = '0 4px 20px rgba(0,0,0,0.3)';
+          const marker3d = markerElement.querySelector('.marker-3d') as HTMLElement | null;
+          if (marker3d) {
+            marker3d.style.transform = 'scale(1)';
+            marker3d.style.boxShadow = '0 4px 20px rgba(0,0,0,0.3)';
+          }
         });
 
         new mapboxgl.Marker({

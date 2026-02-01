@@ -383,12 +383,47 @@ serve(async (req) => {
         }
       }
 
-      // Proceed with send action (reuse code above)
-      return await serve(new Request(req.url, {
-        method: 'POST',
-        headers: req.headers,
-        body: JSON.stringify({ action: 'send', email, type })
-      }));
+      // Generate and send new OTP (inline, no recursive call)
+      const newOtp = generateOTP();
+      const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+
+      const { data: otpData, error: insertError } = await supabase
+        .from('email_otp_codes')
+        .insert({
+          email,
+          code: newOtp,
+          type,
+          expires_at: expiresAt.toISOString(),
+          ip_address: ipAddress,
+          user_agent: userAgent,
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Failed to generate OTP' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+        );
+      }
+
+      const sent = await sendEmailViaResend(email, newOtp, type);
+      if (!sent) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Failed to send email' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: 'OTP resent to email',
+          otpId: otpData.id,
+          expiresAt: expiresAt.toISOString(),
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     return new Response(
