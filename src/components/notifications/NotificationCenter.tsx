@@ -53,7 +53,7 @@ export const NotificationCenter = () => {
 
       if (error) {
         // It's okay if user doesn't have notifications yet
-        if (error.code === 'PGRST116' || error.status === 400) {
+        if (error.code === 'PGRST116') {
           setNotifications([]);
         } else {
           console.error("Error fetching notifications:", error);
@@ -75,14 +75,14 @@ export const NotificationCenter = () => {
     if (!user) return;
 
     const channel = supabase
-      .channel(`notifications-${user.id}`)
+      .channel(`notifications-${user.uid}`)
       .on(
         "postgres_changes",
         {
           event: "INSERT",
           schema: "public",
           table: "notifications",
-          filter: `user_id=eq.${user.id}`,
+          filter: `user_id=eq.${user.uid}`,
         },
         (payload) => {
           setNotifications((prev) => [payload.new as Notification, ...prev]);

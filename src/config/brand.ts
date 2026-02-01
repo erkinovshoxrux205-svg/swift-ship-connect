@@ -73,4 +73,7 @@ export const BRAND_CONFIG = {
   copyright: `© ${new Date().getFullYear()} AsLogUz. Все права защищены.`,
 } as const;
 
+// Alias for backward compatibility
+export const BRAND = BRAND_CONFIG;
+
 export type BrandConfig = typeof BRAND_CONFIG;

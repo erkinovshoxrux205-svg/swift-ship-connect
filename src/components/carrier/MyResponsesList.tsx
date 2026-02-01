@@ -13,7 +13,15 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-interface Response {
+interface OrderData {
+  cargo_type: string;
+  pickup_address: string;
+  delivery_address: string;
+  pickup_date: string;
+  status: string;
+}
+
+interface ResponseData {
   id: string;
   order_id: string;
   price: number;
@@ -21,18 +29,12 @@ interface Response {
   comment: string | null;
   is_accepted: boolean;
   created_at: string;
-  order?: {
-    cargo_type: string;
-    pickup_address: string;
-    delivery_address: string;
-    pickup_date: string;
-    status: string;
-  };
+  order?: OrderData | OrderData[];
 }
 
 export const MyResponsesList = () => {
   const { user } = useAuth();
-  const [responses, setResponses] = useState<Response[]>([]);
+  const [responses, setResponses] = useState<ResponseData[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -52,8 +54,13 @@ export const MyResponsesList = () => {
 
       if (error) {
         console.error("Error fetching responses:", error);
-      } else {
-        setResponses(data || []);
+      } else if (data) {
+        // Transform data to normalize order field
+        const normalized = data.map((item) => ({
+          ...item,
+          order: Array.isArray(item.order) ? item.order[0] : item.order
+        })) as ResponseData[];
+        setResponses(normalized);
       }
 
       setLoading(false);
@@ -100,37 +107,40 @@ export const MyResponsesList = () => {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
-        {responses.map((response) => (
-          <div
-            key={response.id}
-            className="p-3 rounded-lg border bg-card"
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div className="space-y-1 flex-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-medium">
-                    {response.order?.cargo_type || "Заявка"}
-                  </span>
-                  {response.is_accepted ? (
-                    <Badge className="bg-driver text-white">Принято</Badge>
-                  ) : (
-                    <Badge variant="outline">Ожидает</Badge>
-                  )}
-                </div>
-                {response.order && (
-                  <div className="text-sm text-muted-foreground flex items-center gap-2">
-                    <MapPin className="w-3 h-3" />
-                    {response.order.pickup_address} → {response.order.delivery_address}
+        {responses.map((response) => {
+          const orderData = response.order as OrderData | undefined;
+          return (
+            <div
+              key={response.id}
+              className="p-3 rounded-lg border bg-card"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="space-y-1 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-medium">
+                      {orderData?.cargo_type || "Заявка"}
+                    </span>
+                    {response.is_accepted ? (
+                      <Badge className="bg-driver text-white">Принято</Badge>
+                    ) : (
+                      <Badge variant="outline">Ожидает</Badge>
+                    )}
                   </div>
-                )}
-                <div className="text-sm text-muted-foreground">
-                  Ваша цена: <span className="font-medium text-foreground">{response.price.toLocaleString()} ₽</span>
-                  {response.delivery_time && ` • ${response.delivery_time}`}
+                  {orderData && (
+                    <div className="text-sm text-muted-foreground flex items-center gap-2">
+                      <MapPin className="w-3 h-3" />
+                      {orderData.pickup_address} → {orderData.delivery_address}
+                    </div>
+                  )}
+                  <div className="text-sm text-muted-foreground">
+                    Ваша цена: <span className="font-medium text-foreground">{response.price.toLocaleString()} ₽</span>
+                    {response.delivery_time && ` • ${response.delivery_time}`}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </CardContent>
     </Card>
   );
