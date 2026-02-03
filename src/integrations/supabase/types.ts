@@ -501,6 +501,13 @@ export type Database = {
             foreignKeyName: "documents_deal_id_fkey"
             columns: ["deal_id"]
             isOneToOne: false
+            referencedRelation: "active_deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
             referencedRelation: "deals"
             referencedColumns: ["id"]
           },
@@ -651,6 +658,13 @@ export type Database = {
           recorded_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "gps_locations_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "active_deals"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "gps_locations_deal_id_fkey"
             columns: ["deal_id"]
@@ -1073,6 +1087,13 @@ export type Database = {
           sender_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "messages_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "active_deals"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "messages_deal_id_fkey"
             columns: ["deal_id"]
@@ -1798,6 +1819,13 @@ export type Database = {
             foreignKeyName: "ratings_deal_id_fkey"
             columns: ["deal_id"]
             isOneToOne: false
+            referencedRelation: "active_deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ratings_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
             referencedRelation: "deals"
             referencedColumns: ["id"]
           },
@@ -2086,6 +2114,13 @@ export type Database = {
           warehouse_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "shipping_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "active_deals"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "shipping_deal_id_fkey"
             columns: ["deal_id"]
@@ -2470,10 +2505,55 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      active_deals: {
+        Row: {
+          agreed_price: number | null
+          cargo_type: string | null
+          carrier_email: string | null
+          carrier_id: string | null
+          carrier_name: string | null
+          client_email: string | null
+          client_id: string | null
+          client_name: string | null
+          completed_at: string | null
+          created_at: string | null
+          delivery_address: string | null
+          id: string | null
+          order_id: string | null
+          order_price: number | null
+          pickup_address: string | null
+          proof_photo_url: string | null
+          started_at: string | null
+          status: Database["public"]["Enums"]["deal_status"] | null
+          updated_at: string | null
+          weight: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deals_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      carrier_statistics: {
+        Row: {
+          active_deals: number | null
+          avg_deal_price: number | null
+          carrier_id: string | null
+          completed_deals: number | null
+          completion_rate: number | null
+          total_deals: number | null
+          total_earnings: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       cleanup_expired_codes: { Args: never; Returns: undefined }
+      cleanup_old_gps_data: { Args: { days_to_keep?: number }; Returns: number }
       generate_document_number: {
         Args: { _type: Database["public"]["Enums"]["document_type"] }
         Returns: string
@@ -2481,6 +2561,18 @@ export type Database = {
       get_admin_role: {
         Args: { p_user_id: string }
         Returns: Database["public"]["Enums"]["admin_role"]
+      }
+      get_carrier_stats: {
+        Args: { carrier_user_id: string }
+        Returns: {
+          active_deals: number
+          avg_deal_price: number
+          avg_rating: number
+          completed_deals: number
+          completion_rate: number
+          total_deals: number
+          total_earnings: number
+        }[]
       }
       get_user_role: {
         Args: { _user_id: string }
@@ -2538,6 +2630,8 @@ export type Database = {
         }
         Returns: string
       }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
       update_inventory_after_movement: {
         Args: {
           _from_location_id: string
