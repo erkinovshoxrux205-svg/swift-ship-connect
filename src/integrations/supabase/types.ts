@@ -2220,6 +2220,39 @@ export type Database = {
         }
         Relationships: []
       }
+      telegram_registrations: {
+        Row: {
+          created_at: string | null
+          full_name: string | null
+          id: string
+          phone: string
+          role: string | null
+          step: string
+          telegram_id: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          full_name?: string | null
+          id?: string
+          phone: string
+          role?: string | null
+          step?: string
+          telegram_id: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          full_name?: string | null
+          id?: string
+          phone?: string
+          role?: string | null
+          step?: string
+          telegram_id?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       telegram_users: {
         Row: {
           created_at: string | null
