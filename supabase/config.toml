@@ -77,3 +77,6 @@ verify_jwt = false
 
 [functions.cleanup-auth-tokens]
 verify_jwt = false
+
+[functions.telegram-login]
+verify_jwt = false

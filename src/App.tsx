@@ -23,6 +23,7 @@ import UnifiedNavigator from "./pages/UnifiedNavigator";
 import ClientTracking from "./pages/ClientTracking";
 import { LogisticsDashboard } from "./pages/LogisticsDashboard";
 import { ShowcaseMap } from "./pages/ShowcaseMap";
+import TelegramAuth from "./pages/TelegramAuth";
 import 'mapbox-gl/dist/mapbox-gl.css';
 import './components/map/MapboxGLStyles.css';
 import './components/map/Mapbox3DStyles.css';
@@ -45,6 +46,7 @@ const App = () => (
                   <Route path="/signup" element={<Auth />} />
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/register" element={<Auth />} />
+                  <Route path="/telegram-auth" element={<TelegramAuth />} />
                   <Route path="/admin-login" element={<AdminLogin />} />
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/orders/:orderId/responses" element={<OrderResponses />} />
