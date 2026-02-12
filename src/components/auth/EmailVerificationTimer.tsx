@@ -122,7 +122,7 @@ export const EmailVerificationTimer: React.FC<EmailVerificationTimerProps> = ({
       console.log('👤 User UID:', user.uid);
       console.log('✅ Email verified:', user.emailVerified);
       
-      await firebaseSendEmailVerification(user);
+      await firebaseSendEmailVerification(user as any);
       
       toast({
         title: "📧 Письмо отправлено",

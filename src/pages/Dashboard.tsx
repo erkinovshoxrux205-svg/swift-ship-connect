@@ -101,7 +101,7 @@ const Dashboard = () => {
   const isCarrier = role === "carrier";
   const isAdmin = role === "admin";
 
-  const userName = user.email?.split("@")[0] || "User";
+  const userName = user.displayName || user.email?.split("@")[0] || user.phoneNumber || "User";
   const breadcrumbs = [{
     label: t("nav.dashboard")
   }];
