@@ -8,16 +8,14 @@ interface EmailVerificationWrapperProps {
 }
 
 export const EmailVerificationWrapper: React.FC<EmailVerificationWrapperProps> = ({ children }) => {
-  const { user, emailVerified, loading } = useFirebaseAuth();
+  const { user, emailVerified, loading, isTelegramUser } = useFirebaseAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!loading && user && !emailVerified) {
-      // User is logged in but email is not verified
-      // Show verification screen instead of dashboard
+    if (!loading && user && !emailVerified && !isTelegramUser) {
       return;
     }
-  }, [user, emailVerified, loading, navigate]);
+  }, [user, emailVerified, loading, navigate, isTelegramUser]);
 
   if (loading) {
     return (
@@ -27,19 +25,23 @@ export const EmailVerificationWrapper: React.FC<EmailVerificationWrapperProps> =
     );
   }
 
+  // Telegram users skip email verification
+  if (isTelegramUser) {
+    return <>{children}</>;
+  }
+
   // If user is logged in but email is not verified, show verification screen
   if (user && !emailVerified) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background flex items-center justify-center p-4">
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-1/4 -left-32 w-96 h-96 bg-customer/10 rounded-full blur-3xl" />
-          <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-driver/10 rounded-full blur-3xl" />
+          <div className="absolute top-1/4 -left-32 w-96 h-96 bg-primary/10 rounded-full blur-3xl" />
+          <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-primary/10 rounded-full blur-3xl" />
         </div>
 
         <EmailVerificationTimer
           email={user.email || ""}
           onVerified={() => {
-            // Email verified, navigate will happen automatically
             window.location.reload();
           }}
           onError={(error) => {
@@ -50,6 +52,5 @@ export const EmailVerificationWrapper: React.FC<EmailVerificationWrapperProps> =
     );
   }
 
-  // Email is verified or no user, show children
   return <>{children}</>;
 };

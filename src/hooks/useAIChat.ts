@@ -139,8 +139,8 @@ export const useAIChat = () => {
     };
 
     try {
-      // Get Firebase ID token for authentication
-      const idToken = await user.getIdToken();
+      // Get Firebase ID token for authentication (only available for Firebase users)
+      const idToken = (user as any).getIdToken ? await (user as any).getIdToken() : user.uid;
       
       const resp = await fetch(CHAT_URL, {
         method: "POST",
