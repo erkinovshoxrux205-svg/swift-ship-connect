@@ -35,11 +35,11 @@ BEGIN
 
   -- Make async HTTP request to edge function using pg_net
   PERFORM extensions.http_post(
-    url := 'https://eqrzodfukdnwsogjzmoz.supabase.co/functions/v1/notification-trigger',
+    url := supabase_url || '/functions/v1/notification-trigger',
     body := payload::text,
     headers := jsonb_build_object(
       'Content-Type', 'application/json',
-      'Authorization', 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVxcnpvZGZ1a2Rud3NvZ2p6bW96Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkwMTIyNDcsImV4cCI6MjA4NDU4ODI0N30.H9qXvIFbwcGBlpEWfJjXQ4VV46ykZmrJelMxK-UL_ZY'
+      'Authorization', 'Bearer ' || service_role_key
     )::jsonb
   );
 
