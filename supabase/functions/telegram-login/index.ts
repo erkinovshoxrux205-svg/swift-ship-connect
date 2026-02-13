@@ -40,7 +40,7 @@ Deno.serve(async (req) => {
     })
 
   try {
-    const { action, phone, code, fullName, role } = await req.json()
+    const { action, phone, code, fullName, role, verifiedToken } = await req.json()
 
     if (!phone) return json({ success: false, error: 'Phone is required' }, 400)
 
@@ -276,11 +276,6 @@ Deno.serve(async (req) => {
 
     // ─── ACTION: REGISTER ───────────────────────────────────────────────
     if (action === 'register') {
-      const { verifiedToken } = await req.json().catch(() => ({}))
-      // We already parsed req.json() above, so get verifiedToken from the initial parse
-      // Actually we need to re-read. Let's just use the vars from the initial parse.
-      // The verifiedToken should be passed in the body too.
-
       if (!fullName || !role) {
         return json({ success: false, error: 'Имя и роль обязательны' }, 400)
       }
@@ -293,12 +288,7 @@ Deno.serve(async (req) => {
         return json({ success: false, error: 'Имя должно быть от 2 до 100 символов' }, 400)
       }
 
-      // We need verifiedToken from the request body - it was in the initial parse
-      // Actually the initial destructure didn't include verifiedToken. Let me handle this:
-      // The body was already parsed at the top. Let's accept verifiedToken from the raw body.
-
-      // Re-check: phone was already verified?
-      // Look for a valid verified phone session
+      // Check verified phone session
       const { data: verifiedSession } = await supabase
         .from('otp_codes')
         .select('id, phone, expires_at')
