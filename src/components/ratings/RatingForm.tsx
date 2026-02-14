@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Star, Send, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -26,7 +26,7 @@ export const RatingForm = ({
   ratedUserName,
   onRatingSubmitted 
 }: RatingFormProps) => {
-  const { user } = useAuth();
+  const { user } = useFirebaseAuth();
   const { toast } = useToast();
   const [score, setScore] = useState(0);
   const [hoverScore, setHoverScore] = useState(0);
@@ -40,7 +40,7 @@ export const RatingForm = ({
 
     const { error } = await supabase.from("ratings").insert({
       deal_id: dealId,
-      rater_id: user.id,
+      rater_id: user.uid,
       rated_id: ratedUserId,
       score,
       comment: comment.trim() || null,

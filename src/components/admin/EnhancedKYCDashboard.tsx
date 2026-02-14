@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -81,7 +81,7 @@ const riskColors = {
 };
 
 export const EnhancedKYCDashboard = () => {
-  const { user } = useAuth();
+  const { user } = useFirebaseAuth();
   const { t } = useLanguage();
   const { toast } = useToast();
   

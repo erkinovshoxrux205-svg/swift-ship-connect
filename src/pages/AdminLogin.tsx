@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/hooks/useAuth";
+import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,7 +14,7 @@ const passwordSchema = z.string().min(6, "Минимум 6 символов");
 
 const AdminLogin = () => {
   const navigate = useNavigate();
-  const { user, role, signIn, loading: authLoading } = useAuth();
+  const { user, role, signIn, loading: authLoading } = useFirebaseAuth();
   const { toast } = useToast();
 
   const [email, setEmail] = useState("");

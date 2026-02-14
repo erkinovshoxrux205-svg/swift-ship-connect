@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
 
 interface LoyaltyState {
   balance: number;
@@ -18,7 +18,7 @@ interface LoyaltyReward {
 }
 
 export const useLoyalty = () => {
-  const { user } = useAuth();
+  const { user } = useFirebaseAuth();
   const [state, setState] = useState<LoyaltyState>({
     balance: 0,
     lifetimeEarned: 0,
@@ -37,7 +37,7 @@ export const useLoyalty = () => {
       const { data } = await supabase
         .from("loyalty_points")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", user.uid)
         .single();
 
       if (data) {
@@ -50,7 +50,7 @@ export const useLoyalty = () => {
         // Create loyalty record if doesn't exist
         await supabase
           .from("loyalty_points")
-          .insert({ user_id: user.id, balance: 0, lifetime_earned: 0 });
+          .insert({ user_id: user.uid, balance: 0, lifetime_earned: 0 });
         setState({ balance: 0, lifetimeEarned: 0, loading: false });
       }
     };
@@ -86,13 +86,13 @@ export const useLoyalty = () => {
         balance: state.balance + amount,
         lifetime_earned: state.lifetimeEarned + amount,
       })
-      .eq("user_id", user.id);
+      .eq("user_id", user.uid);
 
     if (updateError) return false;
 
     // Log transaction
     await supabase.from("loyalty_transactions").insert({
-      user_id: user.id,
+      user_id: user.uid,
       amount,
       type: "earned",
       reason,
@@ -116,13 +116,13 @@ export const useLoyalty = () => {
     const { error: updateError } = await supabase
       .from("loyalty_points")
       .update({ balance: state.balance - amount })
-      .eq("user_id", user.id);
+      .eq("user_id", user.uid);
 
     if (updateError) return false;
 
     // Log transaction
     await supabase.from("loyalty_transactions").insert({
-      user_id: user.id,
+      user_id: user.uid,
       amount: -amount,
       type: "spent",
       reason,

@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format } from "date-fns";
 import { ru, enUS } from "date-fns/locale";
-import { CalendarIcon, Package, MapPin, Loader2, Tag, Check, X, Truck, Route } from "lucide-react";
+import { CalendarIcon, Package, MapPin, Loader2, Tag, Check, X, Truck, Route, Phone, User } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -147,6 +147,10 @@ export const CreateOrderForm = ({ onSuccess }: CreateOrderFormProps) => {
     pickup_date: z.date({ required_error: t("orders.pickupDate") }),
     description: z.string().optional(),
     client_price: z.string().optional(),
+    sender_name: z.string().min(2, "Minimum 2 characters"),
+    sender_phone: z.string().min(9, "Enter a valid phone number"),
+    receiver_name: z.string().min(2, "Minimum 2 characters"),
+    receiver_phone: z.string().min(9, "Enter a valid phone number"),
   }), [t]);
 
   type OrderFormValues = z.infer<typeof orderSchema>;
@@ -163,6 +167,10 @@ export const CreateOrderForm = ({ onSuccess }: CreateOrderFormProps) => {
       delivery_address: "",
       description: "",
       client_price: "",
+      sender_name: user?.displayName || "",
+      sender_phone: user?.phoneNumber || "",
+      receiver_name: "",
+      receiver_phone: "",
     },
   });
 
@@ -294,6 +302,10 @@ export const CreateOrderForm = ({ onSuccess }: CreateOrderFormProps) => {
       delivery_lat: deliveryCoords?.lat || null,
       delivery_lng: deliveryCoords?.lng || null,
       delivery_place_id: deliveryCoords?.placeId || null,
+      sender_name: data.sender_name,
+      sender_phone: data.sender_phone.replace(/\D/g, ''),
+      receiver_name: data.receiver_name,
+      receiver_phone: data.receiver_phone.replace(/\D/g, ''),
     }).select().single();
 
     if (orderData) {
@@ -375,6 +387,78 @@ export const CreateOrderForm = ({ onSuccess }: CreateOrderFormProps) => {
                 </FormItem>
               )}
             />
+
+            {/* Sender Info */}
+            <div className="space-y-4 p-4 rounded-xl bg-muted/50 border">
+              <div className="flex items-center gap-2 font-medium">
+                <User className="w-4 h-4" />
+                {language === "en" ? "Sender" : "Отправитель"} *
+              </div>
+              <div className="grid md:grid-cols-2 gap-3">
+                <FormField
+                  control={form.control}
+                  name="sender_name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{language === "en" ? "Full Name" : "ФИО"}</FormLabel>
+                      <FormControl>
+                        <Input placeholder={language === "en" ? "John Doe" : "Иванов Иван"} {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="sender_phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{language === "en" ? "Phone" : "Телефон"}</FormLabel>
+                      <FormControl>
+                        <Input type="tel" placeholder="+998 90 123 45 67" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+
+            {/* Receiver Info */}
+            <div className="space-y-4 p-4 rounded-xl bg-muted/50 border">
+              <div className="flex items-center gap-2 font-medium">
+                <Phone className="w-4 h-4" />
+                {language === "en" ? "Receiver" : "Получатель"} *
+              </div>
+              <div className="grid md:grid-cols-2 gap-3">
+                <FormField
+                  control={form.control}
+                  name="receiver_name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{language === "en" ? "Full Name" : "ФИО"}</FormLabel>
+                      <FormControl>
+                        <Input placeholder={language === "en" ? "Jane Doe" : "Петров Петр"} {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="receiver_phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{language === "en" ? "Phone" : "Телефон"}</FormLabel>
+                      <FormControl>
+                        <Input type="tel" placeholder="+998 90 987 65 43" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
 
             {/* Dimensions Grid */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">

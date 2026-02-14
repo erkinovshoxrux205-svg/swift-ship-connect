@@ -4,7 +4,7 @@ import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { ArrowLeft, Package, MapPin, MessageSquare, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
 import { useToast } from "@/hooks/use-toast";
 
 import { Button } from "@/components/ui/button";
@@ -31,7 +31,7 @@ interface Order {
 const OrderChat = () => {
   const { orderId, carrierId } = useParams<{ orderId: string; carrierId: string }>();
   const navigate = useNavigate();
-  const { user, role } = useAuth();
+  const { user, role } = useFirebaseAuth();
   const { toast } = useToast();
 
   const [order, setOrder] = useState<Order | null>(null);
@@ -62,7 +62,7 @@ const OrderChat = () => {
       }
 
       // Verify user is participant
-      const isClient = orderData.client_id === user.id;
+      const isClient = orderData.client_id === user.uid;
       const isCarrier = role === "carrier";
 
       if (!isClient && !isCarrier) {

@@ -7,7 +7,7 @@ import {
   CheckCircle, Clock, TrendingUp, Award, Loader2, Quote, Pencil
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -59,7 +59,7 @@ type UserRole = "client" | "carrier" | "admin";
 const UserProfile = () => {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user } = useFirebaseAuth();
   const { t, language } = useLanguage();
   
   const dateLocale = language === "ru" ? ru : language === "uz" ? ru : enUS;

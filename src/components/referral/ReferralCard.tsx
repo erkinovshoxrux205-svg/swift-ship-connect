@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Share2, Users, Gift, Copy, Check, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,7 +19,7 @@ interface Referral {
 }
 
 export const ReferralCard = () => {
-  const { user } = useAuth();
+  const { user } = useFirebaseAuth();
   const { toast } = useToast();
   const [referralCode, setReferralCode] = useState<string | null>(null);
   const [referrals, setReferrals] = useState<Referral[]>([]);
@@ -34,7 +34,7 @@ export const ReferralCard = () => {
       const { data: profileData } = await supabase
         .from("profiles")
         .select("referral_code")
-        .eq("user_id", user.id)
+        .eq("user_id", user.uid)
         .single();
 
       if (profileData?.referral_code) {
@@ -45,7 +45,7 @@ export const ReferralCard = () => {
       const { data: referralsData } = await supabase
         .from("referrals")
         .select("*")
-        .eq("referrer_id", user.id)
+        .eq("referrer_id", user.uid)
         .order("created_at", { ascending: false });
 
       if (referralsData) {

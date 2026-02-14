@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -42,7 +42,7 @@ const statusConfig = {
 };
 
 export const KYCVerificationForm = () => {
-  const { user } = useAuth();
+  const { user } = useFirebaseAuth();
   const { t } = useLanguage();
   const { toast } = useToast();
   const [kycDoc, setKycDoc] = useState<KYCDocument | null>(null);
@@ -65,7 +65,7 @@ export const KYCVerificationForm = () => {
     const { data, error } = await supabase
       .from("kyc_documents")
       .select("*")
-      .eq("user_id", user.id)
+      .eq("user_id", user.uid)
       .single();
 
     if (data) {
@@ -107,7 +107,7 @@ export const KYCVerificationForm = () => {
 
     try {
       const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}/${type}_${Date.now()}.${fileExt}`;
+      const fileName = `${user.uid}/${type}_${Date.now()}.${fileExt}`;
 
       const { error: uploadError } = await supabase.storage
         .from("kyc-documents")
@@ -158,7 +158,7 @@ export const KYCVerificationForm = () => {
 
     try {
       const docData = {
-        user_id: user.id,
+        user_id: user.uid,
         passport_front_url: passportFront,
         passport_back_url: passportBack,
         selfie_url: selfie,

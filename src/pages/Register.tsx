@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { useAuth } from "@/hooks/useAuth";
+import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -67,7 +67,7 @@ const BUSINESS_TYPES = [
 const MultiStepRegistration = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { signUp, user, loading: authLoading } = useAuth();
+  const { signUp, user, loading: authLoading } = useFirebaseAuth();
   const { toast } = useToast();
 
   const [currentStep, setCurrentStep] = useState(1);
@@ -177,16 +177,17 @@ const MultiStepRegistration = () => {
     setLoading(true);
 
     try {
-      const { error, data } = await signUp(
+      const result = await signUp(
         formData.email,
         formData.password,
         formData.role,
-        formData.fullName
+        formData.fullName,
+        formData.phone
       );
 
-      if (error) {
+      if (result.error) {
         let message = "Произошла ошибка при регистрации";
-        if (error.message.includes("already registered")) {
+        if (result.error.message.includes("already registered") || result.error.message.includes("already-in-use")) {
           message = "Этот email уже зарегистрирован";
         }
         toast({
@@ -198,8 +199,8 @@ const MultiStepRegistration = () => {
         return;
       }
 
-      // Update profile with additional info
-      if (data?.user) {
+      // Update profile with additional info using the current user after signup
+      if (result.success && user) {
         await supabase
           .from("profiles")
           .update({
@@ -207,19 +208,19 @@ const MultiStepRegistration = () => {
             phone_verified: phoneVerified,
             company_name: formData.companyName || null,
           })
-          .eq("user_id", data.user.id);
+          .eq("user_id", user.uid);
 
         // Create registration request for approval
         await supabase
           .from("registration_requests")
           .insert({
-            user_id: data.user.id,
+            user_id: user.uid,
             company_name: formData.companyName || null,
             business_type: formData.businessType || null,
             country: formData.country,
             terms_accepted: formData.termsAccepted,
             privacy_accepted: formData.privacyAccepted,
-            email_verified: true, // Auto-confirm enabled
+            email_verified: true,
             status: 'pending',
             onboarding_step: 4,
           });

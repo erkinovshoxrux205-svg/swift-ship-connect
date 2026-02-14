@@ -4,7 +4,7 @@ import {
   Truck, Crown, Zap, Shield, Loader2 
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -35,7 +35,7 @@ interface Achievement {
 }
 
 export const CarrierAchievements = () => {
-  const { user } = useAuth();
+  const { user } = useFirebaseAuth();
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -50,13 +50,13 @@ export const CarrierAchievements = () => {
     const { data: deals } = await supabase
       .from("deals")
       .select("id, status, agreed_price")
-      .eq("carrier_id", user.id);
+      .eq("carrier_id", user.uid);
 
     // Fetch ratings
     const { data: ratings } = await supabase
       .from("ratings")
       .select("score")
-      .eq("rated_id", user.id);
+      .eq("rated_id", user.uid);
 
     const completedDeals = deals?.filter(d => d.status === "delivered").length || 0;
     const totalEarnings = deals?.filter(d => d.status === "delivered")

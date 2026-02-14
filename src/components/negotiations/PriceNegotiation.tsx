@@ -11,7 +11,7 @@ import {
   User
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -56,7 +56,7 @@ export const PriceNegotiation = ({
   clientPrice,
   onPriceAgreed,
 }: PriceNegotiationProps) => {
-  const { user } = useAuth();
+  const { user } = useFirebaseAuth();
   const { toast } = useToast();
   const [negotiations, setNegotiations] = useState<Negotiation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -128,7 +128,7 @@ export const PriceNegotiation = ({
     const { error } = await supabase.from("price_negotiations").insert({
       order_id: orderId,
       response_id: responseId || null,
-      proposed_by: user.id,
+      proposed_by: user.uid,
       proposed_price: parseFloat(newPrice),
       message: newMessage || null,
       status: "pending",

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
 import { useVoiceNavigation } from "@/hooks/useVoiceNavigation";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -73,7 +73,7 @@ const statusLabels: Record<string, { label: string; color: string; progress: num
 };
 
 export const DriverPanel = () => {
-  const { user } = useAuth();
+  const { user } = useFirebaseAuth();
   const { t } = useLanguage();
   const { speak, speakInstruction, stop: stopVoice, isSpeaking, isLoading: voiceLoading } = useVoiceNavigation();
 
@@ -100,7 +100,7 @@ export const DriverPanel = () => {
             cargo_type, weight, pickup_address, delivery_address, description
           )
         `)
-        .eq("carrier_id", user.id)
+        .eq("carrier_id", user.uid)
         .in("status", ["pending", "accepted", "in_transit"])
         .order("created_at", { ascending: false });
 
@@ -143,7 +143,7 @@ export const DriverPanel = () => {
           event: "*",
           schema: "public",
           table: "deals",
-          filter: `carrier_id=eq.${user.id}`,
+          filter: `carrier_id=eq.${user.uid}`,
         },
         () => {
           fetchDeals();

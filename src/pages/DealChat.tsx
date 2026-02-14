@@ -8,7 +8,7 @@ import {
   Truck, CheckCircle, Navigation, Flag, Star, XCircle, Banknote, Maximize2
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -72,7 +72,7 @@ interface Rating {
 const DealChat = () => {
   const { dealId } = useParams<{ dealId: string }>();
   const navigate = useNavigate();
-  const { user, role } = useAuth();
+  const { user, role } = useFirebaseAuth();
   const { toast } = useToast();
   const { t, language } = useLanguage();
 
@@ -119,8 +119,8 @@ const DealChat = () => {
     }
 
     // Verify user is participant
-    const isClientUser = dealData.client_id === user.id;
-    const isCarrierUser = dealData.carrier_id === user.id;
+    const isClientUser = dealData.client_id === user.uid;
+    const isCarrierUser = dealData.carrier_id === user.uid;
 
     if (!isClientUser && !isCarrierUser) {
       toast({
@@ -155,8 +155,8 @@ const DealChat = () => {
       .eq("deal_id", dealId);
 
     if (ratings) {
-      const mine = ratings.find(r => r.rater_id === user.id);
-      const theirs = ratings.find(r => r.rated_id === user.id);
+      const mine = ratings.find(r => r.rater_id === user.uid);
+      const theirs = ratings.find(r => r.rated_id === user.uid);
       setMyRating(mine || null);
       setOtherRating(theirs || null);
     }
@@ -220,7 +220,7 @@ const DealChat = () => {
     // Add system message
     await supabase.from("messages").insert({
       deal_id: deal.id,
-      sender_id: user.id,
+      sender_id: user.uid,
       content: message,
       is_system: true,
     });
@@ -264,7 +264,7 @@ const DealChat = () => {
     const cancellerRole = isCarrier ? t("dealChat.carrier") : t("dealChat.client");
     await supabase.from("messages").insert({
       deal_id: deal.id,
-      sender_id: user.id,
+      sender_id: user.uid,
       content: `${cancellerRole} ${t("dealChat.dealCancelled").toLowerCase()}. ${t("dealChat.cancelReason")}: ${cancelReason.trim()}`,
       is_system: true,
     });

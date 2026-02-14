@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Navigation, Loader2, MapPin, Pause, Play } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,7 +12,7 @@ interface GpsTrackerProps {
 }
 
 export const GpsTracker = ({ dealId }: GpsTrackerProps) => {
-  const { user } = useAuth();
+  const { user } = useFirebaseAuth();
   const { toast } = useToast();
   const [tracking, setTracking] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -25,7 +25,7 @@ export const GpsTracker = ({ dealId }: GpsTrackerProps) => {
 
     const { error } = await supabase.from("gps_locations").insert({
       deal_id: dealId,
-      carrier_id: user.id,
+      carrier_id: user.uid,
       latitude: position.coords.latitude,
       longitude: position.coords.longitude,
     });

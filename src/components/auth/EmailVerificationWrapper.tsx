@@ -1,7 +1,19 @@
-import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
 import { EmailVerificationTimer } from "./EmailVerificationTimer";
+
+// Public routes that should never be blocked by email verification
+const PUBLIC_PATHS = [
+  "/",
+  "/login",
+  "/signup",
+  "/auth",
+  "/register",
+  "/telegram-auth",
+  "/admin-login",
+  "/api-docs",
+  "/showcase",
+];
 
 interface EmailVerificationWrapperProps {
   children: React.ReactNode;
@@ -9,13 +21,12 @@ interface EmailVerificationWrapperProps {
 
 export const EmailVerificationWrapper: React.FC<EmailVerificationWrapperProps> = ({ children }) => {
   const { user, emailVerified, loading, isTelegramUser } = useFirebaseAuth();
-  const navigate = useNavigate();
+  const location = useLocation();
 
-  useEffect(() => {
-    if (!loading && user && !emailVerified && !isTelegramUser) {
-      return;
-    }
-  }, [user, emailVerified, loading, navigate, isTelegramUser]);
+  // Check if current path is public
+  const isPublicPath = PUBLIC_PATHS.some(
+    (path) => location.pathname === path || location.pathname.startsWith(path + "/")
+  );
 
   if (loading) {
     return (
@@ -25,12 +36,17 @@ export const EmailVerificationWrapper: React.FC<EmailVerificationWrapperProps> =
     );
   }
 
+  // Always allow public routes without verification
+  if (isPublicPath) {
+    return <>{children}</>;
+  }
+
   // Telegram users skip email verification
   if (isTelegramUser) {
     return <>{children}</>;
   }
 
-  // If user is logged in but email is not verified, show verification screen
+  // If user is logged in but email is not verified on a protected route, show verification screen
   if (user && !emailVerified) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background flex items-center justify-center p-4">

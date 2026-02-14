@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, differenceInHours } from "date-fns";
 import { ru, enUS } from "date-fns/locale";
-import { Package, MapPin, Calendar, Weight, Ruler, MessageSquare, Eye, Loader2, X, Image as ImageIcon } from "lucide-react";
+import { Package, MapPin, Calendar, Weight, Ruler, MessageSquare, Eye, Loader2, X, Image as ImageIcon, Phone, User, Clock, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
 import { useToast } from "@/hooks/use-toast";
